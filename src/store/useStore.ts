@@ -51,6 +51,15 @@ const defaultSettings: ClinicSettings = {
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],
+  working_schedule: [
+    { day: 1, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 2, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 3, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 4, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 5, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 6, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+    { day: 0, enabled: false, slots: [] },
+  ],
   timezone: 'Asia/Kolkata',
 }
 

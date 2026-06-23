@@ -42,6 +42,22 @@ describe('isClinicOpenNow', () => {
     expect(isClinicOpenNow(settings, new Date('2026-06-23T14:00:00.000Z'))).toBe(false)
   })
 
+
+
+  it('closes between split clinic sessions', () => {
+    const splitSettings = {
+      ...settings,
+      working_schedule: [
+        { day: 2, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+      ],
+      working_days: [2],
+    }
+
+    expect(isClinicOpenNow(splitSettings, new Date('2026-06-23T05:00:00.000Z'))).toBe(true)
+    expect(isClinicOpenNow(splitSettings, new Date('2026-06-23T09:30:00.000Z'))).toBe(false)
+    expect(isClinicOpenNow(splitSettings, new Date('2026-06-23T13:30:00.000Z'))).toBe(true)
+  })
+
   it('closes on excluded weekdays', () => {
     expect(isClinicOpenNow(settings, new Date('2026-06-21T06:30:00.000Z'))).toBe(false)
   })

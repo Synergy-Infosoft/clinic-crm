@@ -31,6 +31,97 @@ export const registrationSchema = z.object({
 
 export type RegistrationInput = z.input<typeof registrationSchema>
 
+export interface WorkingHoursSlot {
+  start: string
+  end: string
+}
+
+export interface ClinicDaySchedule {
+  day: number
+  enabled: boolean
+  slots: WorkingHoursSlot[]
+}
+
+export const defaultWorkingSchedule: ClinicDaySchedule[] = [
+  { day: 1, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 2, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 3, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 4, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 5, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 6, enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+  { day: 0, enabled: false, slots: [] },
+]
+
+export const splitClinicScheduleExample: ClinicDaySchedule[] = [
+  { day: 1, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 2, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 3, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 4, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 5, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 6, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+  { day: 0, enabled: true, slots: [{ start: '09:00', end: '13:00' }] },
+]
+
+function isTime(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)
+}
+
+function normalizeSlot(slot: unknown): WorkingHoursSlot | null {
+  if (!slot || typeof slot !== 'object') return null
+  const candidate = slot as Record<string, unknown>
+  if (!isTime(candidate.start) || !isTime(candidate.end) || candidate.start >= candidate.end) return null
+  return { start: candidate.start, end: candidate.end }
+}
+
+export function normalizeWorkingSchedule(
+  value: unknown,
+  fallbackDays: number[] = [1, 2, 3, 4, 5, 6],
+  fallbackStart = '09:00',
+  fallbackEnd = '18:00'
+): ClinicDaySchedule[] {
+  const byDay = new Map<number, ClinicDaySchedule>()
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!item || typeof item !== 'object') continue
+      const candidate = item as Record<string, unknown>
+      const day = Number(candidate.day)
+      if (!Number.isInteger(day) || day < 0 || day > 6) continue
+      const slots = Array.isArray(candidate.slots)
+        ? candidate.slots.map(normalizeSlot).filter((slot): slot is WorkingHoursSlot => Boolean(slot))
+        : []
+      byDay.set(day, {
+        day,
+        enabled: Boolean(candidate.enabled) && slots.length > 0,
+        slots: slots.slice(0, 3),
+      })
+    }
+  }
+
+  return [1, 2, 3, 4, 5, 6, 0].map((day) => {
+    const existing = byDay.get(day)
+    if (existing) return existing
+    const enabled = fallbackDays.includes(day) && isTime(fallbackStart) && isTime(fallbackEnd) && fallbackStart < fallbackEnd
+    return {
+      day,
+      enabled,
+      slots: enabled ? [{ start: fallbackStart, end: fallbackEnd }] : [],
+    }
+  })
+}
+
+export function formatTimeRange(slot: WorkingHoursSlot) {
+  return `${slot.start}?${slot.end}`
+}
+
+export function formatWorkingScheduleSummary(settings: PublicClinicSettings) {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  return settings.working_schedule
+    .filter((day) => day.enabled && day.slots.length > 0)
+    .map((day) => `${days[day.day]} ${day.slots.map(formatTimeRange).join(', ')}`)
+    .join(' ? ')
+}
+
 export interface PublicClinicSettings {
   clinic_name: string
   address: string
@@ -40,6 +131,7 @@ export interface PublicClinicSettings {
   working_hours_start: string
   working_hours_end: string
   working_days: number[]
+  working_schedule: ClinicDaySchedule[]
   timezone: string
 }
 
@@ -52,6 +144,7 @@ export const fallbackClinicSettings: PublicClinicSettings = {
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],
+  working_schedule: defaultWorkingSchedule,
   timezone: 'Asia/Kolkata',
 }
 
@@ -77,11 +170,18 @@ export function isClinicOpenNow(settings: PublicClinicSettings, now = new Date()
     Sat: 6,
   }
   const currentTime = `${hour}:${minute}`
+  const day = weekday ? weekdayIndex[weekday] : undefined
+  if (day === undefined) return false
 
+  const schedule = normalizeWorkingSchedule(
+    settings.working_schedule,
+    settings.working_days,
+    settings.working_hours_start.slice(0, 5),
+    settings.working_hours_end.slice(0, 5)
+  )
+  const today = schedule.find((entry) => entry.day === day)
   return Boolean(
-    weekday &&
-      settings.working_days.includes(weekdayIndex[weekday]) &&
-      currentTime >= settings.working_hours_start.slice(0, 5) &&
-      currentTime <= settings.working_hours_end.slice(0, 5)
+    today?.enabled &&
+      today.slots.some((slot) => currentTime >= slot.start && currentTime <= slot.end)
   )
 }

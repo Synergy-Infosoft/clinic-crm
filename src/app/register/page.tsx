@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { Stethoscope, Shield, Clock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import * as dataService from '@/lib/dataService'
-import { fallbackClinicSettings, type PublicClinicSettings } from '@/lib/registration'
+import { fallbackClinicSettings, formatWorkingScheduleSummary, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
 
 const schema = z.object({
@@ -55,6 +55,7 @@ export default function RegisterPage() {
   const [clinicOpen, setClinicOpen] = useState(false)
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
+  const scheduleSummary = formatWorkingScheduleSummary(settings)
 
   useEffect(() => {
     const load = async () => {
@@ -145,8 +146,8 @@ export default function RegisterPage() {
             <div>
               <p className="text-sm font-semibold text-amber-800">Registration is Closed</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                Please visit us during working hours ({settings.working_hours_start} –{' '}
-                {settings.working_hours_end}). Registration will reopen automatically.
+                Please visit us during working hours: {scheduleSummary || 'contact reception for timings'}.
+                Registration will reopen automatically.
               </p>
             </div>
           </div>
@@ -415,7 +416,7 @@ export default function RegisterPage() {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
             <Clock className="w-3.5 h-3.5" />
-            <span>Working hours: {settings.working_hours_start} – {settings.working_hours_end}, Mon–Sat</span>
+            <span>Working hours: {scheduleSummary || 'Contact reception'}</span>
           </div>
         </div>
       </div>

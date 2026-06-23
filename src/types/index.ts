@@ -81,6 +81,17 @@ export interface Invoice {
   patient?: Patient
 }
 
+export interface WorkingHoursSlot {
+  start: string
+  end: string
+}
+
+export interface ClinicDaySchedule {
+  day: number
+  enabled: boolean
+  slots: WorkingHoursSlot[]
+}
+
 export interface ChargePreset {
   id: string
   name: string
@@ -98,6 +109,7 @@ export interface ClinicSettings {
   working_hours_start: string
   working_hours_end: string
   working_days: number[]
+  working_schedule: ClinicDaySchedule[]
   timezone: string
 }
 

@@ -5,6 +5,7 @@
 
 import { createClient } from './supabase/client'
 import { format } from 'date-fns'
+import { normalizeWorkingSchedule } from './registration'
 import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats, ClinicSettings } from '../types'
 import type { Database } from '../types/database'
 
@@ -358,6 +359,12 @@ export async function getClinicSettings(): Promise<ClinicSettings> {
     working_hours_start: String(data?.working_hours_start ?? '09:00').slice(0, 5),
     working_hours_end: String(data?.working_hours_end ?? '18:00').slice(0, 5),
     working_days: data?.working_days ?? [1, 2, 3, 4, 5, 6],
+    working_schedule: normalizeWorkingSchedule(
+      data?.working_schedule,
+      data?.working_days ?? [1, 2, 3, 4, 5, 6],
+      String(data?.working_hours_start ?? '09:00').slice(0, 5),
+      String(data?.working_hours_end ?? '18:00').slice(0, 5)
+    ),
     timezone: data?.timezone ?? 'Asia/Kolkata',
   }
 }
@@ -375,7 +382,8 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
       registration_number: settings.registration_number.trim(),
       working_hours_start: settings.working_hours_start,
       working_hours_end: settings.working_hours_end,
-      working_days: settings.working_days,
+      working_days: settings.working_schedule.filter((day) => day.enabled).map((day) => day.day),
+      working_schedule: JSON.parse(JSON.stringify(settings.working_schedule)),
       timezone: settings.timezone,
       updated_at: new Date().toISOString(),
     })
@@ -392,6 +400,12 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
     working_hours_start: String(data.working_hours_start).slice(0, 5),
     working_hours_end: String(data.working_hours_end).slice(0, 5),
     working_days: data.working_days,
+    working_schedule: normalizeWorkingSchedule(
+      data.working_schedule,
+      data.working_days,
+      String(data.working_hours_start).slice(0, 5),
+      String(data.working_hours_end).slice(0, 5)
+    ),
     timezone: data.timezone,
   }
 }

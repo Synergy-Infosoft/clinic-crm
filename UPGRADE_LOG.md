@@ -126,3 +126,23 @@ Validation performed:
 - `npm run lint` ? passed.
 - `npm run test` ? passed, 4 tests.
 - `npm run build` ? passed and includes `/settings`.
+
+## Split clinic working-hours support
+
+Updated: 2026-06-23T11:40:00.000Z
+
+- Added `working_schedule` JSONB support on `clinic_settings` through `supabase/migrations/20260623112936_clinic_working_schedule.sql`.
+- Preserved old `working_hours_start`, `working_hours_end`, and `working_days` as fallback compatibility fields.
+- Updated clinic open/closed logic to support multiple time slots per day, including morning/evening sessions.
+- Added a Settings shortcut to apply a split schedule: Monday-Saturday `08:00-14:00` and `17:00-21:00`, Sunday `09:00-13:00`.
+- Updated the public registration closed/open messaging to show the full schedule instead of one broad time range.
+- Added a regression test proving the clinic is closed between split sessions.
+- Applied the migration to the linked Supabase project and verified `clinic_settings.working_schedule` exists as `jsonb`.
+- Supabase security advisor still reports only `auth_leaked_password_protection`.
+
+Validation performed:
+
+- `npm run typecheck` ? passed.
+- `npm run lint` ? passed.
+- `npm run test` ? passed, 5 tests.
+- `npm run build` ? passed.

@@ -163,6 +163,7 @@ export interface Database {
         working_hours_start: string
         working_hours_end: string
         working_days: number[]
+        working_schedule: Json
         timezone: string
         created_at: string
         updated_at: string

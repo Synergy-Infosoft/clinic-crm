@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { fallbackClinicSettings, isClinicOpenNow, registrationSchema } from '@/lib/registration'
+import { fallbackClinicSettings, formatWorkingScheduleSummary, isClinicOpenNow, normalizeWorkingSchedule, registrationSchema } from '@/lib/registration'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +44,12 @@ export async function POST(request: NextRequest) {
       ...(settingsRow ?? {}),
       working_hours_start: String(settingsRow?.working_hours_start ?? fallbackClinicSettings.working_hours_start).slice(0, 5),
       working_hours_end: String(settingsRow?.working_hours_end ?? fallbackClinicSettings.working_hours_end).slice(0, 5),
+      working_schedule: normalizeWorkingSchedule(
+        settingsRow?.working_schedule,
+        settingsRow?.working_days ?? fallbackClinicSettings.working_days,
+        String(settingsRow?.working_hours_start ?? fallbackClinicSettings.working_hours_start).slice(0, 5),
+        String(settingsRow?.working_hours_end ?? fallbackClinicSettings.working_hours_end).slice(0, 5)
+      ),
     }
 
     const userClient = await createClient()
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!user && !isClinicOpenNow(settings)) {
       return errorResponse(
-        `Registration is closed. Please visit between ${settings.working_hours_start} and ${settings.working_hours_end}.`,
+        `Registration is closed. Working hours: ${formatWorkingScheduleSummary(settings) || 'Please contact reception'}.`,
         403
       )
     }
