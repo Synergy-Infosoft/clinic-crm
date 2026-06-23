@@ -447,7 +447,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const { data: paidInvoices } = await supabase
     .from('invoices')
     .select('total')
-    .gte('created_at', today)
+    .gte('paid_at', today)
     .neq('payment_status', 'pending')
 
   const { count: pendingCount } = await supabase

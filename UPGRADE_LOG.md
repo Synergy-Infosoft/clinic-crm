@@ -146,3 +146,26 @@ Validation performed:
 - `npm run lint` ? passed.
 - `npm run test` ? passed, 5 tests.
 - `npm run build` ? passed.
+
+## Invoice owner analytics and filters
+
+Updated: 2026-06-23T12:05:00.000Z
+
+- Upgraded the `/invoices` page with a collection and patient analytics summary.
+- Added selected-range summary cards for total collection, cash collection, online/UPI collection, average bill, patient count, repeat patients, discount given, and pending amount.
+- Collection metrics now count paid invoices by `paid_at`; pending amount and patient visit counts use invoices created in the selected date range.
+- Added quick date controls for Today, Yesterday, 2 days ago, Last 7 days, This week, and This month.
+- Added custom From/To date fields with a date-basis filter for invoice/payment/activity date.
+- Expanded invoice search to include invoice number, patient name, phone, father name, token number, disease/complaint, payment type, dates, and amounts.
+- Added filters for payment status, payment method, visit type, discount status, and amount range.
+- Added a CSV export for the currently filtered invoice report.
+- Expanded the invoice table with patient contact, visit type, complaint, created time, paid time, subtotal, discount, total, status, and method columns.
+- Updated quick "mark paid" action to record cash as the payment method.
+- Aligned dashboard revenue calculation with collection logic by using `paid_at` instead of invoice creation date.
+
+Validation performed:
+
+- `npm run typecheck` ? passed.
+- `npm run lint` ? passed.
+- `npm run test` ? passed, 5 tests.
+- `npm run build` ? passed.
