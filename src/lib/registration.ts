@@ -1,9 +1,20 @@
 import { z } from 'zod'
 
-export const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'] as const
+export const referralSources = [
+  'google',
+  'youtube',
+  'social_media',
+  'friend_family',
+  'doctor_referral',
+  'walk_in',
+  'other',
+] as const
+
+export const visitTypes = ['first_visit', 'follow_up'] as const
 
 export const registrationSchema = z.object({
   full_name: z.string().trim().min(2, 'Please enter your full name').max(120),
+  father_name: z.string().trim().max(120).optional(),
   age: z.coerce.number().int().min(1, 'Age must be at least 1').max(120, 'Please enter a valid age'),
   gender: z.enum(['male', 'female', 'other']),
   phone: z.string().transform((value) => value.replace(/\D/g, '')).pipe(
@@ -12,7 +23,10 @@ export const registrationSchema = z.object({
   chief_complaint: z.string().trim().min(5, 'Please describe the reason for your visit').max(1000),
   doctor_id: z.union([z.string().uuid(), z.literal('')]).optional(),
   address: z.string().trim().max(500).optional(),
-  blood_group: z.union([z.enum(bloodGroups), z.literal('')]).optional(),
+  referral_source: z.union([z.enum(referralSources), z.literal('')]).optional(),
+  visit_type: z.enum(visitTypes),
+  consultation_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a consultation date'),
+  consultation_time: z.string().regex(/^\d{2}:\d{2}$/, 'Please select a consultation time'),
 })
 
 export type RegistrationInput = z.input<typeof registrationSchema>

@@ -68,7 +68,6 @@ export default function DashboardPage() {
       await dataService.updateVisit(visitId, { status })
       await loadData()
       const labels: Record<string, string> = {
-        with_doctor: 'Marked as With Doctor',
         completed: 'Marked as Completed',
         cancelled: 'Visit Cancelled',
       }
@@ -96,12 +95,12 @@ export default function DashboardPage() {
           desc: 'Total registrations',
         },
         {
-          label: 'Waiting',
-          value: stats.waiting,
+          label: 'Pending',
+          value: stats.pending,
           icon: Clock,
           color: 'text-amber-600',
           bg: 'bg-amber-50',
-          desc: 'In waiting room',
+          desc: 'Awaiting consultation',
         },
         {
           label: 'Completed',
@@ -227,19 +226,11 @@ export default function DashboardPage() {
                         <StatusBadge status={visit.status} />
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-xs text-slate-500">{formatTime(visit.created_at)}</span>
+                        <span className="text-xs text-slate-500">{visit.consultation_time?.slice(0, 5) || formatTime(visit.created_at)}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {visit.status === 'waiting' && (
-                            <button
-                              onClick={() => handleStatusChange(visit.id, 'with_doctor')}
-                              className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium whitespace-nowrap"
-                            >
-                              With Doctor
-                            </button>
-                          )}
-                          {visit.status === 'with_doctor' && (
+                          {visit.status === 'pending' && (
                             <button
                               onClick={() => handleStatusChange(visit.id, 'completed')}
                               className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium whitespace-nowrap"

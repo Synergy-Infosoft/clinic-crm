@@ -17,13 +17,36 @@ const schema = z.object({
   age: z.coerce.number().min(1).max(120),
   gender: z.enum(['male', 'female', 'other']),
   phone: z.string().regex(/^\d{10}$/, 'Enter 10-digit phone number'),
+  father_name: z.string().max(120).optional(),
   chief_complaint: z.string().min(5, 'Please describe the complaint (min 5 chars)'),
   doctor_id: z.string().optional(),
-  blood_group: z.string().optional(),
+  referral_source: z.string().optional(),
+  visit_type: z.enum(['first_visit', 'follow_up']),
+  consultation_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  consultation_time: z.string().regex(/^\d{2}:\d{2}$/),
   address: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
+
+function toDateInputValue(date = new Date()) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
+function toTimeInputValue(date = new Date()) {
+  return date.toTimeString().slice(0, 5)
+}
+
+const referralOptions = [
+  { value: 'google', label: 'Google Search' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'social_media', label: 'Social Media' },
+  { value: 'friend_family', label: 'Friend or Family' },
+  { value: 'doctor_referral', label: 'Doctor Referral' },
+  { value: 'walk_in', label: 'Walk-in / Signboard' },
+  { value: 'other', label: 'Other' },
+]
 
 interface AddVisitDialogProps {
   isOpen: boolean
@@ -41,6 +64,11 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
+    defaultValues: {
+      visit_type: 'first_visit',
+      consultation_date: toDateInputValue(),
+      consultation_time: toTimeInputValue(),
+    },
   })
 
   const handleFormSubmit: SubmitHandler<FormData> = async (data) => {
@@ -53,7 +81,11 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
         chief_complaint: data.chief_complaint,
         doctor_id: data.doctor_id || undefined,
         address: data.address,
-        blood_group: data.blood_group,
+        father_name: data.father_name,
+        referral_source: data.referral_source,
+        visit_type: data.visit_type,
+        consultation_date: data.consultation_date,
+        consultation_time: data.consultation_time,
       })
       toast.success(`Patient registered — Token #${result.token_number}`)
       reset()
@@ -73,6 +105,12 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
           placeholder="Patient's full name"
           error={errors.full_name?.message}
           {...register('full_name')}
+        />
+        <Input
+          label="Father's Name"
+          placeholder="Optional"
+          error={errors.father_name?.message}
+          {...register('father_name')}
         />
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -105,8 +143,34 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
           error={errors.phone?.message}
           {...register('phone')}
         />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Consultation Date"
+            type="date"
+            required
+            error={errors.consultation_date?.message}
+            {...register('consultation_date')}
+          />
+          <Input
+            label="Consultation Time"
+            type="time"
+            required
+            error={errors.consultation_time?.message}
+            {...register('consultation_time')}
+          />
+        </div>
+        <Select
+          label="Visit Type"
+          required
+          options={[
+            { value: 'first_visit', label: 'First-time visit' },
+            { value: 'follow_up', label: 'Follow-up / repeat visit' },
+          ]}
+          error={errors.visit_type?.message}
+          {...register('visit_type')}
+        />
         <Textarea
-          label="Chief Complaint"
+          label="Disease / Symptoms"
           required
           placeholder="Describe the reason for visit..."
           rows={2}
@@ -122,12 +186,13 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
           error={errors.doctor_id?.message}
           {...register('doctor_id')}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
-            label="Blood Group"
-            options={['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((g) => ({ value: g, label: g }))}
-            placeholder="Select (optional)"
-            {...register('blood_group')}
+            label="How did you hear about us?"
+            options={referralOptions}
+            placeholder="Select an option"
+            error={errors.referral_source?.message}
+            {...register('referral_source')}
           />
           <Input
             label="Address"

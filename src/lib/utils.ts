@@ -32,10 +32,8 @@ export function timeAgo(date: string | Date): string {
 
 export function getStatusColor(status: string): string {
   switch (status) {
-    case 'waiting':
+    case 'pending':
       return 'bg-amber-100 text-amber-800 border-amber-200'
-    case 'with_doctor':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
     case 'completed':
       return 'bg-emerald-100 text-emerald-800 border-emerald-200'
     case 'cancelled':
@@ -53,10 +51,8 @@ export function getStatusColor(status: string): string {
 
 export function getStatusLabel(status: string): string {
   switch (status) {
-    case 'waiting':
-      return 'Waiting'
-    case 'with_doctor':
-      return 'With Doctor'
+    case 'pending':
+      return 'Pending'
     case 'completed':
       return 'Completed'
     case 'cancelled':

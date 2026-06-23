@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
       p_chief_complaint: input.chief_complaint,
       p_doctor_id: input.doctor_id || null,
       p_address: input.address || null,
-      p_blood_group: input.blood_group || null,
+      p_father_name: input.father_name || null,
+      p_referral_source: input.referral_source || null,
+      p_visit_type: input.visit_type,
+      p_consultation_date: input.consultation_date,
+      p_consultation_time: input.consultation_time,
       p_registered_by: user ? 'receptionist' : 'self',
       p_request_hash: requestHash,
     })

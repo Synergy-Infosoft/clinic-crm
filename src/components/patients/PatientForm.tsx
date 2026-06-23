@@ -14,8 +14,9 @@ const schema = z.object({
   age: z.coerce.number().min(1, 'Age must be at least 1').max(120, 'Age must be less than 120'),
   gender: z.enum(['male', 'female', 'other']),
   phone: z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'),
+  father_name: z.string().max(120).optional(),
+  referral_source: z.string().optional(),
   address: z.string().optional(),
-  blood_group: z.string().optional(),
 })
 
 export type PatientFormData = z.infer<typeof schema>
@@ -40,8 +41,9 @@ export function PatientForm({ patient, onSubmit, onCancel, submitLabel = 'Save P
           age: patient.age,
           gender: patient.gender,
           phone: patient.phone,
+          father_name: patient.father_name ?? '',
+          referral_source: patient.referral_source ?? '',
           address: patient.address ?? '',
-          blood_group: patient.blood_group ?? '',
         }
       : undefined,
   })
@@ -82,6 +84,12 @@ export function PatientForm({ patient, onSubmit, onCancel, submitLabel = 'Save P
         />
       </div>
       <Input
+        label="Father's Name"
+        placeholder="Optional"
+        error={errors.father_name?.message}
+        {...register('father_name')}
+      />
+      <Input
         label="Phone Number"
         type="tel"
         required
@@ -91,21 +99,19 @@ export function PatientForm({ patient, onSubmit, onCancel, submitLabel = 'Save P
         {...register('phone')}
       />
       <Select
-        label="Blood Group"
+        label="How did they hear about us?"
         options={[
-          { value: 'A+', label: 'A+' },
-          { value: 'A-', label: 'A-' },
-          { value: 'B+', label: 'B+' },
-          { value: 'B-', label: 'B-' },
-          { value: 'O+', label: 'O+' },
-          { value: 'O-', label: 'O-' },
-          { value: 'AB+', label: 'AB+' },
-          { value: 'AB-', label: 'AB-' },
-          { value: 'unknown', label: "Don't know" },
+          { value: 'google', label: 'Google Search' },
+          { value: 'youtube', label: 'YouTube' },
+          { value: 'social_media', label: 'Social Media' },
+          { value: 'friend_family', label: 'Friend or Family' },
+          { value: 'doctor_referral', label: 'Doctor Referral' },
+          { value: 'walk_in', label: 'Walk-in / Signboard' },
+          { value: 'other', label: 'Other' },
         ]}
-        placeholder="Select blood group (optional)"
-        error={errors.blood_group?.message}
-        {...register('blood_group')}
+        placeholder="Select an option"
+        error={errors.referral_source?.message}
+        {...register('referral_source')}
       />
       <Textarea
         label="Address"

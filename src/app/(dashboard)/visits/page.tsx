@@ -105,16 +105,14 @@ export default function VisitsPage() {
 
   const statusTabs: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'All' },
-    { value: 'waiting', label: 'Waiting' },
-    { value: 'with_doctor', label: 'With Doctor' },
+    { value: 'pending', label: 'Pending' },
     { value: 'completed', label: 'Completed' },
     { value: 'cancelled', label: 'Cancelled' },
   ]
 
   const counts: Record<StatusFilter, number> = {
     all: visits.length,
-    waiting: visits.filter((v) => v.status === 'waiting').length,
-    with_doctor: visits.filter((v) => v.status === 'with_doctor').length,
+    pending: visits.filter((v) => v.status === 'pending').length,
     completed: visits.filter((v) => v.status === 'completed').length,
     cancelled: visits.filter((v) => v.status === 'cancelled').length,
   }
@@ -211,7 +209,7 @@ export default function VisitsPage() {
                     <p className="text-xs text-slate-600 mt-1 line-clamp-1">{visit.chief_complaint}</p>
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                       {visit.doctor && <span className="text-xs text-slate-500">Dr: {visit.doctor.name}</span>}
-                      <span className="text-xs text-slate-400">{formatTime(visit.created_at)}</span>
+                      <span className="text-xs text-slate-400">{visit.consultation_time?.slice(0, 5) || formatTime(visit.created_at)}</span>
                       {visit.notes && (
                         <span className="text-xs text-slate-500 flex items-center gap-1">
                           <StickyNote className="w-3 h-3" /> Has notes
@@ -221,15 +219,7 @@ export default function VisitsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {visit.status === 'waiting' && (
-                      <button
-                        onClick={() => handleStatusChange(visit.id, 'with_doctor')}
-                        className="text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium whitespace-nowrap"
-                      >
-                        With Doctor
-                      </button>
-                    )}
-                    {visit.status === 'with_doctor' && (
+                    {visit.status === 'pending' && (
                       <button
                         onClick={() => handleStatusChange(visit.id, 'completed')}
                         className="text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium"
@@ -281,7 +271,7 @@ export default function VisitsPage() {
               <div>
                 <p className="text-xs text-slate-500 mb-0.5">Status</p>
                 <StatusBadge status={selectedVisit.status} />
-                <p className="text-xs text-slate-500 mt-1">{formatTime(selectedVisit.created_at)}</p>
+                <p className="text-xs text-slate-500 mt-1">{selectedVisit.consultation_date} at {selectedVisit.consultation_time?.slice(0, 5) || formatTime(selectedVisit.created_at)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 mb-0.5">Chief Complaint</p>
@@ -334,15 +324,7 @@ export default function VisitsPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {selectedVisit.status === 'waiting' && (
-                <button
-                  onClick={() => handleStatusChange(selectedVisit.id, 'with_doctor')}
-                  className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                  Mark as With Doctor
-                </button>
-              )}
-              {selectedVisit.status === 'with_doctor' && (
+              {selectedVisit.status === 'pending' && (
                 <button
                   onClick={() => handleStatusChange(selectedVisit.id, 'completed')}
                   className="px-4 py-2 text-sm font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"

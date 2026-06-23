@@ -5,7 +5,7 @@
 
 import { createClient } from './supabase/client'
 import { format } from 'date-fns'
-import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats } from '../types'
+import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats, ClinicSettings } from '../types'
 import type { Database } from '../types/database'
 
 export interface SelfRegisterPayload {
@@ -16,7 +16,11 @@ export interface SelfRegisterPayload {
   chief_complaint: string
   doctor_id?: string
   address?: string
-  blood_group?: string
+  father_name?: string
+  referral_source?: string
+  visit_type: 'first_visit' | 'follow_up'
+  consultation_date: string
+  consultation_time: string
 }
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
@@ -77,7 +81,7 @@ export async function getVisits(date?: string): Promise<Visit[]> {
     .from('visits')
     .select('*, patient:patients(*), doctor:doctors(*)')
     .order('token_number', { ascending: true })
-  if (date) query = query.eq('token_date', date)
+  if (date) query = query.eq('consultation_date', date)
   const { data, error } = await query
   if (error) throw error
   return data as Visit[]
@@ -333,6 +337,65 @@ export async function deleteChargePreset(id: string): Promise<void> {
 
 // ─── Self Registration ────────────────────────────────────────────────────────
 
+
+// ??? Clinic Settings ??????????????????????????????????????????????????????????
+
+export async function getClinicSettings(): Promise<ClinicSettings> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('clinic_settings')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle()
+  if (error) throw error
+
+  return {
+    clinic_name: data?.clinic_name ?? 'ClinicFlow Medical Center',
+    address: data?.address ?? '',
+    phone: data?.phone ?? '',
+    doctor_name: data?.doctor_name ?? 'Clinic Doctor',
+    registration_number: data?.registration_number ?? '',
+    working_hours_start: String(data?.working_hours_start ?? '09:00').slice(0, 5),
+    working_hours_end: String(data?.working_hours_end ?? '18:00').slice(0, 5),
+    working_days: data?.working_days ?? [1, 2, 3, 4, 5, 6],
+    timezone: data?.timezone ?? 'Asia/Kolkata',
+  }
+}
+
+export async function updateClinicSettings(settings: ClinicSettings): Promise<ClinicSettings> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('clinic_settings')
+    .upsert({
+      id: 1,
+      clinic_name: settings.clinic_name.trim(),
+      address: settings.address.trim(),
+      phone: settings.phone.trim(),
+      doctor_name: settings.doctor_name.trim(),
+      registration_number: settings.registration_number.trim(),
+      working_hours_start: settings.working_hours_start,
+      working_hours_end: settings.working_hours_end,
+      working_days: settings.working_days,
+      timezone: settings.timezone,
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single()
+  if (error) throw error
+
+  return {
+    clinic_name: data.clinic_name,
+    address: data.address,
+    phone: data.phone,
+    doctor_name: data.doctor_name,
+    registration_number: data.registration_number,
+    working_hours_start: String(data.working_hours_start).slice(0, 5),
+    working_hours_end: String(data.working_hours_end).slice(0, 5),
+    working_days: data.working_days,
+    timezone: data.timezone,
+  }
+}
+
 export async function selfRegister(payload: SelfRegisterPayload): Promise<{
   token_number: number
   visit_id: string
@@ -380,8 +443,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     patients_today: visits.length,
-    waiting: visits.filter((v) => v.status === 'waiting').length,
-    with_doctor: visits.filter((v) => v.status === 'with_doctor').length,
+    pending: visits.filter((v) => v.status === 'pending').length,
     completed: visits.filter((v) => v.status === 'completed').length,
     revenue_today: (paidInvoices ?? []).reduce((acc, inv) => acc + inv.total, 0),
     pending_invoices: pendingCount ?? 0,

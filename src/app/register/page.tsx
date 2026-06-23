@@ -16,13 +16,36 @@ const schema = z.object({
   age: z.coerce.number().min(1, 'Age must be at least 1').max(120, 'Please enter a valid age'),
   gender: z.enum(['male', 'female', 'other']),
   phone: z.string().regex(/^\d{10}$/, 'Please enter a valid 10-digit phone number'),
-  chief_complaint: z.string().min(10, 'Please describe your symptoms in at least 10 characters'),
+  father_name: z.string().max(120).optional(),
+  chief_complaint: z.string().min(5, 'Please describe your symptoms in at least 5 characters'),
   doctor_id: z.string().optional(),
   address: z.string().optional(),
-  blood_group: z.string().optional(),
+  referral_source: z.string().optional(),
+  visit_type: z.enum(['first_visit', 'follow_up']),
+  consultation_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a consultation date'),
+  consultation_time: z.string().regex(/^\d{2}:\d{2}$/, 'Please select a consultation time'),
 })
 
 type FormData = z.infer<typeof schema>
+
+function toDateInputValue(date = new Date()) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
+function toTimeInputValue(date = new Date()) {
+  return date.toTimeString().slice(0, 5)
+}
+
+const referralOptions = [
+  { value: 'google', label: 'Google Search' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'social_media', label: 'Social Media' },
+  { value: 'friend_family', label: 'Friend or Family' },
+  { value: 'doctor_referral', label: 'Doctor Referral' },
+  { value: 'walk_in', label: 'Walk-in / Signboard' },
+  { value: 'other', label: 'Other' },
+]
 
 // Default clinic settings — will be replaced by DB settings later
 export default function RegisterPage() {
@@ -59,6 +82,11 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
+    defaultValues: {
+      visit_type: 'first_visit',
+      consultation_date: toDateInputValue(),
+      consultation_time: toTimeInputValue(),
+    },
   })
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -71,7 +99,11 @@ export default function RegisterPage() {
         chief_complaint: data.chief_complaint,
         doctor_id: data.doctor_id || undefined,
         address: data.address,
-        blood_group: data.blood_group,
+        father_name: data.father_name,
+        referral_source: data.referral_source,
+        visit_type: data.visit_type,
+        consultation_date: data.consultation_date,
+        consultation_time: data.consultation_time,
       })
       if (result.duplicate_registration) {
         toast.info(`You are already registered today. Your token is #${result.token_number}.`)
@@ -151,6 +183,25 @@ export default function RegisterPage() {
               )}
             </div>
 
+            {/* Father's Name */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Father&apos;s Name
+                <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter father's name"
+                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                  errors.father_name ? 'border-red-400' : 'border-slate-300'
+                }`}
+                {...register('father_name')}
+              />
+              {errors.father_name && (
+                <p className="mt-1.5 text-xs text-red-600">{errors.father_name.message}</p>
+              )}
+            </div>
+
             {/* Age + Gender */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -213,14 +264,62 @@ export default function RegisterPage() {
               )}
             </div>
 
+            {/* Consultation Date + Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Consultation Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                    errors.consultation_date ? 'border-red-400' : 'border-slate-300'
+                  }`}
+                  {...register('consultation_date')}
+                />
+                {errors.consultation_date && (
+                  <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Consultation Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                    errors.consultation_time ? 'border-red-400' : 'border-slate-300'
+                  }`}
+                  {...register('consultation_time')}
+                />
+                {errors.consultation_time && (
+                  <p className="mt-1.5 text-xs text-red-600">{errors.consultation_time.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Visit Type */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Visit Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+                {...register('visit_type')}
+              >
+                <option value="first_visit">First-time visit</option>
+                <option value="follow_up">Follow-up / repeat visit</option>
+              </select>
+            </div>
+
             {/* Chief Complaint */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Reason for Visit / Symptoms <span className="text-red-500">*</span>
+                Disease / Symptoms <span className="text-red-500">*</span>
               </label>
               <textarea
                 rows={3}
-                placeholder="Describe your symptoms briefly... (e.g. Fever and cold for 3 days)"
+                placeholder="Describe the disease or symptoms briefly... (minimum 5 characters)"
                 className={`w-full px-4 py-3 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent resize-none ${
                   errors.chief_complaint ? 'border-red-400' : 'border-slate-300'
                 }`}
@@ -252,19 +351,19 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* Blood Group */}
+            {/* Referral Source */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Blood Group
+                How did you hear about us?
                 <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
               </label>
               <select
                 className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
-                {...register('blood_group')}
+                {...register('referral_source')}
               >
-                <option value="">Don&apos;t know / Prefer not to say</option>
-                {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                <option value="">Select an option</option>
+                {referralOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </div>

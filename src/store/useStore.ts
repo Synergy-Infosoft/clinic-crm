@@ -51,6 +51,7 @@ const defaultSettings: ClinicSettings = {
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],
+  timezone: 'Asia/Kolkata',
 }
 
 export const useStore = create<AppState>()(

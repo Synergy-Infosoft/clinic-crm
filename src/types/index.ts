@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'receptionist' | 'doctor'
 
-export type VisitStatus = 'waiting' | 'with_doctor' | 'completed' | 'cancelled'
+export type VisitStatus = 'pending' | 'completed' | 'cancelled'
 
 export type PaymentStatus = 'pending' | 'paid_cash' | 'paid_online'
 
@@ -28,6 +28,8 @@ export interface Patient {
   gender: 'male' | 'female' | 'other'
   phone: string
   address: string | null
+  father_name: string | null
+  referral_source: string | null
   blood_group: string | null
   created_at: string
   updated_at?: string
@@ -40,6 +42,9 @@ export interface Visit {
   token_number: number
   token_date: string
   chief_complaint: string
+  consultation_date: string
+  consultation_time: string
+  visit_type: 'first_visit' | 'follow_up'
   status: VisitStatus
   notes: string | null
   prescription: string | null
@@ -93,12 +98,12 @@ export interface ClinicSettings {
   working_hours_start: string
   working_hours_end: string
   working_days: number[]
+  timezone: string
 }
 
 export interface DashboardStats {
   patients_today: number
-  waiting: number
-  with_doctor: number
+  pending: number
   completed: number
   revenue_today: number
   pending_invoices: number

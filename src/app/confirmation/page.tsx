@@ -9,7 +9,7 @@ import { BellRing, Clock3, Home, MapPin, RefreshCw, Smartphone } from 'lucide-re
 interface RegistrationStatus {
   token_number: number
   patient_name: string
-  status: 'waiting' | 'with_doctor' | 'completed' | 'cancelled'
+  status: 'pending' | 'completed' | 'cancelled'
   queue_position: number | null
   registered_at: string
 }

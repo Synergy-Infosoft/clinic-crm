@@ -8,6 +8,9 @@ describe('registrationSchema', () => {
     gender: 'female' as const,
     phone: '98765 43210',
     chief_complaint: 'Fever for two days',
+    visit_type: 'first_visit' as const,
+    consultation_date: '2026-06-23',
+    consultation_time: '10:30',
   }
 
   it('normalizes a valid Indian phone number', () => {

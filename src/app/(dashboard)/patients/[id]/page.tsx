@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { User, Phone, MapPin, Activity, ArrowLeft, Calendar, FileText } from 'lucide-react';
+import { User, Phone, MapPin, ArrowLeft, Calendar, FileText, Megaphone } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/Button';
@@ -111,14 +111,26 @@ export default function PatientProfilePage() {
                 </div>
               </div>
 
-              {patient.blood_group && (
+              {patient.father_name && (
                 <div className="flex items-center gap-3 pt-4">
-                  <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-                    <Activity className="w-4 h-4 text-red-600" />
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <User className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 font-medium">Blood Group</p>
-                    <p className="text-sm font-semibold text-slate-900">{patient.blood_group}</p>
+                    <p className="text-xs text-slate-500 font-medium">Father&apos;s Name</p>
+                    <p className="text-sm font-semibold text-slate-900">{patient.father_name}</p>
+                  </div>
+                </div>
+              )}
+
+              {patient.referral_source && (
+                <div className="flex items-center gap-3 pt-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <Megaphone className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-medium">Heard About Us</p>
+                    <p className="text-sm font-semibold text-slate-900 capitalize">{patient.referral_source.replace('_', ' ')}</p>
                   </div>
                 </div>
               )}
@@ -163,12 +175,20 @@ export default function PatientProfilePage() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-slate-900">
-                              {format(new Date(visit.token_date), 'MMMM d, yyyy')}
+                              {format(new Date(visit.consultation_date || visit.token_date), 'MMMM d, yyyy')}
                             </span>
                             <span className="text-xs text-slate-500">•</span>
                             <span className="text-xs font-medium text-slate-600">
                               Token #{visit.token_number}
                             </span>
+                            {visit.consultation_time && (
+                              <>
+                                <span className="text-xs text-slate-500">?</span>
+                                <span className="text-xs font-medium text-slate-600">
+                                  {visit.consultation_time.slice(0, 5)}
+                                </span>
+                              </>
+                            )}
                           </div>
                           {visit.doctor && (
                             <p className="text-xs text-slate-500 flex items-center gap-1.5">

@@ -86,3 +86,43 @@ Updated: 2026-06-23T10:52:00.000Z
 1. Paste the real service-role key into `SUPABASE_SERVICE_ROLE_KEY` locally and in the deployment environment.
 2. Enable Supabase Auth leaked-password protection in the Supabase dashboard.
 3. Set `NEXT_PUBLIC_APP_URL` to the deployed production URL before production QR-code use.
+
+## Patient registration field update
+
+Updated: 2026-06-23T11:14:00.000Z
+
+- Added `supabase/migrations/20260623110331_patient_visit_metadata.sql`.
+- Added optional patient fields: `father_name` and `referral_source`.
+- Added visit scheduling fields: `consultation_date`, `consultation_time`, and `visit_type`.
+- Removed Blood Group from patient-facing and staff-facing forms. The existing nullable database column is preserved to avoid data loss.
+- Changed visit statuses from `waiting / with_doctor / completed / cancelled` to `pending / completed / cancelled`.
+- Migrated existing `waiting` and `with_doctor` visits to `pending` on the linked Supabase database.
+- Updated QR registration, manual staff registration, patient add form, patient list/profile, dashboard, visit queue, confirmation status polling, TypeScript types, and mock data.
+- Updated disease/symptoms minimum length to 5 characters in the public form.
+- Applied the migration to the linked Supabase project with `supabase db push --linked --yes`.
+- Verified new columns exist through a read-only `information_schema` query.
+- Verified existing live visit statuses are now only `pending`, `completed`, and `cancelled`.
+- Supabase security advisor still reports only `auth_leaked_password_protection`.
+
+Validation performed:
+
+- `npm run typecheck` ? passed.
+- `npm run lint` ? passed.
+- `npm run test` ? passed, 4 tests.
+- `npm run build` ? passed.
+
+## Settings route fix
+
+Updated: 2026-06-23T11:25:00.000Z
+
+- Added the missing `/settings` dashboard page to fix the sidebar 404.
+- Added editable clinic settings for clinic details, contact info, registration number, working hours, working days, and timezone.
+- Wired the page to the existing `clinic_settings` table through the authenticated Supabase client.
+- Added clinic settings data-service helpers and completed the `ClinicSettings` type with `timezone`.
+
+Validation performed:
+
+- `npm run typecheck` ? passed.
+- `npm run lint` ? passed.
+- `npm run test` ? passed, 4 tests.
+- `npm run build` ? passed and includes `/settings`.

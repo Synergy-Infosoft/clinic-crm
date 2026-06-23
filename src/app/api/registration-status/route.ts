@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       .from('visits')
       .select('id')
       .eq('token_date', visit.token_date)
-      .in('status', ['waiting', 'with_doctor'])
+      .eq('status', 'pending')
       .order('token_number', { ascending: true })
 
     if (queueError) throw queueError

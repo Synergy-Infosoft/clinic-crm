@@ -30,6 +30,8 @@ export interface Database {
         gender: 'male' | 'female' | 'other'
         phone: string
         address: string | null
+        father_name: string | null
+        referral_source: string | null
         blood_group: string | null
         created_at: string
         updated_at: string
@@ -42,7 +44,10 @@ export interface Database {
           token_number: number
           token_date: string
           chief_complaint: string
-          status: 'waiting' | 'with_doctor' | 'completed' | 'cancelled'
+          consultation_date: string
+          consultation_time: string
+          visit_type: 'first_visit' | 'follow_up'
+          status: 'pending' | 'completed' | 'cancelled'
           notes: string | null
           prescription: string | null
           registered_by: 'self' | 'receptionist'
@@ -57,7 +62,10 @@ export interface Database {
           token_number: number
           token_date?: string
           chief_complaint: string
-          status?: 'waiting' | 'with_doctor' | 'completed' | 'cancelled'
+          consultation_date?: string
+          consultation_time?: string
+          visit_type?: 'first_visit' | 'follow_up'
+          status?: 'pending' | 'completed' | 'cancelled'
           notes?: string | null
           prescription?: string | null
           registered_by?: 'self' | 'receptionist'
@@ -187,7 +195,11 @@ export interface Database {
           p_chief_complaint: string
           p_doctor_id?: string | null
           p_address?: string | null
-          p_blood_group?: string | null
+          p_father_name?: string | null
+          p_referral_source?: 'google' | 'youtube' | 'social_media' | 'friend_family' | 'doctor_referral' | 'walk_in' | 'other' | null
+          p_visit_type?: 'first_visit' | 'follow_up'
+          p_consultation_date?: string
+          p_consultation_time?: string
           p_registered_by?: string
           p_request_hash?: string | null
         }
