@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, ReactNode } from 'react'
+import { useEffect, useId, useRef, type KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -14,9 +14,13 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'md', className }: ModalProps) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      window.setTimeout(() => dialogRef.current?.focus(), 0)
     } else {
       document.body.style.overflow = ''
     }
@@ -24,12 +28,30 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
   }, [isOpen])
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
+    const handleEsc = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
   }, [onClose])
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable?.length) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
 
   if (!isOpen) return null
 
@@ -40,6 +62,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
     >
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
         className={cn(
           'relative bg-white rounded-xl shadow-2xl w-full max-h-[90vh] overflow-y-auto z-10',
           {
@@ -54,9 +82,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <h2 id={titleId} className="text-base font-semibold text-slate-900">{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -93,9 +122,8 @@ export function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="p-6">
-        <h3 className="text-base font-semibold text-slate-900 mb-2">{title}</h3>
         <p className="text-sm text-slate-600 mb-6">{description}</p>
         <div className="flex gap-3 justify-end">
           <button

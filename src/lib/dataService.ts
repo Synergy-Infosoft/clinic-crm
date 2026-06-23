@@ -6,6 +6,7 @@
 import { createClient } from './supabase/client'
 import { format } from 'date-fns'
 import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats } from '../types'
+import type { Database } from '../types/database'
 
 export interface SelfRegisterPayload {
   full_name: string
@@ -116,7 +117,7 @@ export async function createVisit(
 export async function updateVisit(id: string, updates: Partial<Visit>): Promise<Visit> {
   const supabase = createClient()
   const { status, doctor_id, notes, prescription } = updates as any
-  const patch: Record<string, any> = {}
+  const patch: Database['public']['Tables']['visits']['Update'] = {}
   if (status !== undefined) patch.status = status
   if (doctor_id !== undefined) patch.doctor_id = doctor_id
   if (notes !== undefined) patch.notes = notes
@@ -217,10 +218,11 @@ export async function createInvoice(
 
 export async function updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {
   const supabase = createClient()
-  const patch: Record<string, any> = { ...updates }
+  const patch: Database['public']['Tables']['invoices']['Update'] = {}
 
   // Recalculate totals if line_items changed
   if (updates.line_items !== undefined) {
+    patch.line_items = updates.line_items
     patch.subtotal = updates.line_items.reduce(
       (acc: number, item: LineItem) => acc + item.amount * item.quantity,
       0
@@ -233,13 +235,14 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
     if (current) patch.total = current.subtotal - updates.discount
   }
 
+  if (updates.discount !== undefined) patch.discount = updates.discount
+  if (updates.payment_status !== undefined) patch.payment_status = updates.payment_status
+  if (updates.payment_method !== undefined) patch.payment_method = updates.payment_method
+
   // Handle payment
   if (updates.payment_status && updates.payment_status !== 'pending') {
     patch.paid_at = new Date().toISOString()
   }
-
-  delete patch.visit
-  delete patch.patient
 
   const { data, error } = await supabase
     .from('invoices')
@@ -334,83 +337,21 @@ export async function selfRegister(payload: SelfRegisterPayload): Promise<{
   token_number: number
   visit_id: string
   patient_name: string
-  patient_id: string
+  confirmation_ref: string
+  duplicate_registration: boolean
 }> {
-  const today = format(new Date(), 'yyyy-MM-dd')
-
-  // Check for existing patient
-  let patient = await getPatientByPhone(payload.phone)
-
-  if (patient) {
-    // Check for duplicate registration today
-    const supabase = createClient()
-    const { data: todayVisit } = await supabase
-      .from('visits')
-      .select('*')
-      .eq('patient_id', patient.id)
-      .eq('token_date', today)
-      .neq('status', 'cancelled')
-      .maybeSingle()
-
-    if (todayVisit) {
-      return {
-        token_number: todayVisit.token_number,
-        visit_id: todayVisit.id,
-        patient_name: patient.full_name,
-        patient_id: patient.id,
-      }
-    }
-
-    // Update patient details
-    patient = await updatePatient(patient.id, {
-      full_name: payload.full_name,
-      age: payload.age,
-      address: payload.address ?? patient.address,
-      blood_group: payload.blood_group ?? patient.blood_group,
-    })
-  } else {
-    patient = await createPatient({
-      full_name: payload.full_name,
-      age: payload.age,
-      gender: payload.gender,
-      phone: payload.phone,
-      address: payload.address ?? null,
-      blood_group: payload.blood_group ?? null,
-    })
-  }
-
-  const token = await getNextToken(today)
-
-  const visit = await createVisit({
-    patient_id: patient.id,
-    doctor_id: payload.doctor_id ?? null,
-    token_number: token,
-    token_date: today,
-    chief_complaint: payload.chief_complaint,
-    status: 'waiting',
-    notes: null,
-    prescription: null,
-    registered_by: 'self',
+  const response = await fetch('/api/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
+  const result = await response.json()
 
-  // Create draft invoice with consultation fee
-  const presets = await getChargePresets()
-  const consultationPreset = presets.find((p) => p.name === 'Consultation Fee')
-
-  if (consultationPreset) {
-    await createInvoice(visit.id, patient.id, [
-      { id: crypto.randomUUID(), name: consultationPreset.name, quantity: 1, amount: consultationPreset.amount },
-    ])
-  } else {
-    await createInvoice(visit.id, patient.id, [])
+  if (!response.ok) {
+    throw new Error(result.error || 'Registration failed. Please try again.')
   }
 
-  return {
-    token_number: token,
-    visit_id: visit.id,
-    patient_name: patient.full_name,
-    patient_id: patient.id,
-  }
+  return result
 }
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { Stethoscope, Shield, Clock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import * as dataService from '@/lib/dataService'
-import { isClinicOpen } from '@/lib/utils'
+import { fallbackClinicSettings, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
 
 const schema = z.object({
@@ -25,36 +25,30 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 // Default clinic settings — will be replaced by DB settings later
-const DEFAULT_SETTINGS = {
-  clinic_name: 'ClinicFlow Medical Center',
-  doctor_name: 'Dr. Clinic',
-  working_hours_start: '09:00',
-  working_hours_end: '20:00',
-  working_days: [1, 2, 3, 4, 5, 6],
-}
-
 export default function RegisterPage() {
   const router = useRouter()
   const toast = useToast()
   const [doctors, setDoctors] = useState<Doctor[]>([])
-  const [clinicOpen, setClinicOpen] = useState(true)
-  const settings = DEFAULT_SETTINGS
+  const [clinicOpen, setClinicOpen] = useState(false)
+  const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
+  const [configLoading, setConfigLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const doctorList = await dataService.getDoctors()
-        setDoctors(doctorList)
+        const response = await fetch('/api/public-config')
+        if (!response.ok) throw new Error('Unable to load clinic configuration')
+        const config = await response.json()
+        setDoctors(config.doctors ?? [])
+        setSettings(config.settings ?? fallbackClinicSettings)
+        setClinicOpen(Boolean(config.clinic_open))
       } catch {
         setDoctors([])
+        setSettings(fallbackClinicSettings)
+        setClinicOpen(false)
+      } finally {
+        setConfigLoading(false)
       }
-      setClinicOpen(
-        isClinicOpen(
-          settings.working_hours_start,
-          settings.working_hours_end,
-          settings.working_days
-        )
-      )
     }
     load()
   }, [])
@@ -79,9 +73,10 @@ export default function RegisterPage() {
         address: data.address,
         blood_group: data.blood_group,
       })
-      router.push(
-        `/confirmation?token=${result.token_number}&name=${encodeURIComponent(result.patient_name)}&visitId=${result.visit_id}`
-      )
+      if (result.duplicate_registration) {
+        toast.info(`You are already registered today. Your token is #${result.token_number}.`)
+      }
+      router.replace(`/confirmation?ref=${encodeURIComponent(result.confirmation_ref)}`)
     } catch (err: any) {
       toast.error(err.message || 'Registration failed. Please try again.')
     }
@@ -119,7 +114,7 @@ export default function RegisterPage() {
               <p className="text-sm font-semibold text-amber-800">Registration is Closed</p>
               <p className="text-xs text-amber-700 mt-0.5">
                 Please visit us during working hours ({settings.working_hours_start} –{' '}
-                {settings.working_hours_end}). You can still submit this form and your record will be saved.
+                {settings.working_hours_end}). Registration will reopen automatically.
               </p>
             </div>
           </div>
@@ -291,7 +286,7 @@ export default function RegisterPage() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || configLoading || !clinicOpen}
               className="w-full h-14 bg-[#1D9E75] hover:bg-[#0F6E56] disabled:opacity-60 text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1D9E75]/20 active:scale-[0.98]"
             >
               {isSubmitting ? (
@@ -302,8 +297,12 @@ export default function RegisterPage() {
                   </svg>
                   Registering...
                 </>
-              ) : (
+              ) : configLoading ? (
+                <>Checking reception hours...</>
+              ) : clinicOpen ? (
                 <>Get My Token Number</>
+              ) : (
+                <>Registration Closed</>
               )}
             </button>
           </form>

@@ -176,7 +176,7 @@ button:active:not(:disabled) {
 /* Form input focus */
 input:focus, textarea:focus, select:focus {
   outline: none;
-  ring: 2px solid var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
 }
 
 /* Hover effects */
@@ -187,4 +187,13 @@ input:focus, textarea:focus, select:focus {
 .hover-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -8,7 +8,7 @@ interface Profile {
   id: string;
   full_name: string;
   role: "admin" | "receptionist" | "doctor";
-  email: string;
+  email?: string;
 }
 
 interface AuthContextType {
@@ -23,7 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -39,12 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) fetchProfile(user.id);
+      return supabase.auth.getSession();
+    }).then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
 
     const {
       data: { subscription },

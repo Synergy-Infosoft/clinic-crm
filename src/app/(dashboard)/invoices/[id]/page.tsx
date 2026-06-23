@@ -60,7 +60,7 @@ export default function InvoiceDetailPage() {
         total: invoice.total,
       });
       toast.success("Invoice saved");
-    } catch (err) {
+    } catch {
       toast.error("Failed to save invoice");
     } finally {
       setSaving(false);
@@ -78,7 +78,7 @@ export default function InvoiceDetailPage() {
       const full = await dataService.getInvoiceById(invoice.id);
       setInvoice(full);
       toast.success("Payment recorded - " + (method === "cash" ? "Cash" : "UPI/Online"));
-    } catch (err) {
+    } catch {
       toast.error("Failed to record payment");
     } finally {
       setSaving(false);

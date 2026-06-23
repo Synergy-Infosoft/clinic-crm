@@ -108,7 +108,7 @@ export function InvoiceForm({ invoice, chargePresets, onUpdate }: InvoiceFormPro
             {invoice.line_items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-8 text-sm text-slate-400">
-                  No charges added yet. Click "Add Charge" to add items.
+                  No charges added yet. Click &quot;Add Charge&quot; to add items.
                 </td>
               </tr>
             ) : (

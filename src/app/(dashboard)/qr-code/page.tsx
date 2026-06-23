@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { Download, ExternalLink, Copy } from 'lucide-react'
+import { ClipboardList, Copy, Download, ExternalLink, Printer, Smartphone } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 // Dynamically import QRCode to avoid SSR issues (it uses canvas/window internals)
@@ -15,8 +15,11 @@ export default function QRCodePage() {
   const [registrationUrl, setRegistrationUrl] = useState('')
 
   useEffect(() => {
-    // Safe to access window only on client
-    setRegistrationUrl(`${window.location.origin}/register`)
+    const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
+    const baseUrl = configuredUrl && configuredUrl.startsWith('http')
+      ? configuredUrl.replace(/\/$/, '')
+      : window.location.origin
+    setRegistrationUrl(`${baseUrl}/register`)
   }, [])
 
   const handleCopy = () => {
@@ -25,18 +28,45 @@ export default function QRCodePage() {
     toast.success('Link copied to clipboard!')
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const svg = document.querySelector('#qr-svg svg') as SVGSVGElement | null
     if (!svg) return
     const svgData = new XMLSerializer().serializeToString(svg)
-    const blob = new Blob([svgData], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'clinic-registration-qr.svg'
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('QR code downloaded!')
+    const image = new Image()
+    const svgUrl = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }))
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 640
+      canvas.height = 720
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(image, 100, 72, 440, 440)
+      ctx.fillStyle = '#0f172a'
+      ctx.font = '700 30px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('Scan to Register', 320, 570)
+      ctx.fillStyle = '#475569'
+      ctx.font = '18px system-ui, sans-serif'
+      ctx.fillText('ClinicFlow Medical Center', 320, 605)
+      canvas.toBlob((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'clinic-registration-qr.png'
+        a.click()
+        URL.revokeObjectURL(url)
+        URL.revokeObjectURL(svgUrl)
+        toast.success('QR code downloaded as PNG')
+      }, 'image/png')
+    }
+    image.src = svgUrl
+  }
+
+  const handlePrint = () => {
+    window.print()
   }
 
   return (
@@ -52,7 +82,7 @@ export default function QRCodePage() {
           <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 flex flex-col items-center">
             {/* Header */}
             <div className="w-14 h-14 bg-[#1D9E75]/10 rounded-2xl flex items-center justify-center mb-4">
-              <span className="text-2xl">📱</span>
+              <Smartphone className="w-7 h-7 text-[#1D9E75]" aria-hidden="true" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-1">Scan to Register</h2>
             <p className="text-slate-500 text-sm text-center mb-8 max-w-xs">
@@ -103,7 +133,7 @@ export default function QRCodePage() {
           )}
 
           {/* Actions */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-3 gap-3 print:hidden">
             <button
               onClick={handleCopy}
               className="flex items-center justify-center gap-2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition-colors"
@@ -116,13 +146,23 @@ export default function QRCodePage() {
               className="flex items-center justify-center gap-2 h-11 bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
-              Download QR
+              Download
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center justify-center gap-2 h-11 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-xl transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              Print
             </button>
           </div>
 
           {/* Instructions */}
           <div className="mt-6 bg-blue-50 border border-blue-100 rounded-2xl p-5">
-            <p className="text-sm font-semibold text-blue-900 mb-3">📋 Setup Instructions</p>
+            <p className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" aria-hidden="true" />
+              Setup Instructions
+            </p>
             <ol className="space-y-2">
               {[
                 'Print this QR code and place it at the reception desk or entrance.',

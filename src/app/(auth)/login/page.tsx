@@ -35,7 +35,11 @@ export default function LoginPage() {
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
       await login(data.email, data.password)
-      router.push('/dashboard')
+      const requestedPath = new URLSearchParams(window.location.search).get('next')
+      const destination = requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
+        ? requestedPath
+        : '/dashboard'
+      router.replace(destination)
     } catch (err: any) {
       toast.error(err.message || 'Invalid credentials')
     }

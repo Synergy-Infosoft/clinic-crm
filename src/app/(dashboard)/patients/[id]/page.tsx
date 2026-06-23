@@ -7,7 +7,6 @@ import { User, Phone, MapPin, Activity, ArrowLeft, Calendar, FileText } from 'lu
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/Button';
-import { formatTime } from '@/lib/utils';
 import * as dataService from '@/lib/dataService';
 import type { Patient, Visit } from '@/types';
 

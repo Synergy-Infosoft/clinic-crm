@@ -26,7 +26,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     loadData()

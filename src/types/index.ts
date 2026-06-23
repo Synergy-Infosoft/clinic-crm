@@ -44,6 +44,7 @@ export interface Visit {
   notes: string | null
   prescription: string | null
   registered_by: 'self' | 'receptionist'
+  confirmation_token?: string
   created_at: string
   updated_at?: string
   patient?: Patient
