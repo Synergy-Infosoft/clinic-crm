@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, type ComponentType } from 'react'
 import { useRouter } from 'next/navigation'
-import { format, startOfMonth, startOfWeek, subDays } from 'date-fns'
+import { format, startOfMonth, startOfWeek, subDays, subYears } from 'date-fns'
 import {
   Banknote,
   CalendarDays,
@@ -17,6 +17,7 @@ import {
   Smartphone,
   Users,
   Wallet,
+  X,
 } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -25,7 +26,7 @@ import * as dataService from '@/lib/dataService'
 import type { Invoice } from '@/types'
 import { useToast } from '@/components/ui/Toast'
 
-type DatePreset = 'today' | 'yesterday' | 'two_days_ago' | 'last_7_days' | 'this_week' | 'this_month'
+type DatePreset = 'today' | 'yesterday' | 'two_days_ago' | 'last_7_days' | 'this_week' | 'this_month' | 'last_1_year'
 type ActiveDatePreset = DatePreset | 'custom'
 type DateBasis = 'activity' | 'invoice' | 'payment'
 type PaymentStatusFilter = 'all' | Invoice['payment_status']
@@ -53,6 +54,7 @@ const datePresets: { value: DatePreset; label: string }[] = [
   { value: 'last_7_days', label: 'Last 7 days' },
   { value: 'this_week', label: 'This week' },
   { value: 'this_month', label: 'This month' },
+  { value: 'last_1_year', label: 'Last 1 year' },
 ]
 
 const toneClasses: Record<SummaryCardProps['tone'], string> = {
@@ -94,6 +96,10 @@ function getPresetRange(preset: DatePreset): DateRange {
 
   if (preset === 'this_month') {
     return { from: formatInputDate(startOfMonth(now)), to: formatInputDate(now) }
+  }
+
+  if (preset === 'last_1_year') {
+    return { from: formatInputDate(subYears(now, 1)), to: formatInputDate(now) }
   }
 
   return { from: formatInputDate(now), to: formatInputDate(now) }
@@ -186,6 +192,7 @@ export default function InvoicesPage() {
   const [discountFilter, setDiscountFilter] = useState<DiscountFilter>('all')
   const [minAmount, setMinAmount] = useState('')
   const [maxAmount, setMaxAmount] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -201,6 +208,17 @@ export default function InvoicesPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (!filtersOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFiltersOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [filtersOpen])
 
   const rangeLabel = getRangeLabel(dateRange)
 
@@ -295,9 +313,41 @@ export default function InvoicesPage() {
     [invoices, dateRange, dateBasis]
   )
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (datePreset === 'custom') count += 1
+    if (dateBasis !== 'activity') count += 1
+    if (paymentStatusFilter !== 'all') count += 1
+    if (paymentMethodFilter !== 'all') count += 1
+    if (visitTypeFilter !== 'all') count += 1
+    if (discountFilter !== 'all') count += 1
+    if (minAmount.trim() !== '') count += 1
+    if (maxAmount.trim() !== '') count += 1
+    return count
+  }, [
+    datePreset,
+    dateBasis,
+    paymentStatusFilter,
+    paymentMethodFilter,
+    visitTypeFilter,
+    discountFilter,
+    minAmount,
+    maxAmount,
+  ])
+
   const handlePresetChange = (preset: DatePreset) => {
     setDatePreset(preset)
     setDateRange(getPresetRange(preset))
+  }
+
+  const handlePeriodChange = (value: ActiveDatePreset) => {
+    if (value === 'custom') {
+      setDatePreset('custom')
+      setFiltersOpen(true)
+      return
+    }
+
+    handlePresetChange(value)
   }
 
   const resetFilters = () => {
@@ -396,22 +446,24 @@ export default function InvoicesPage() {
                 Paid collections use payment date. Pending totals and patient counts use invoices created in the selected range.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {datePresets.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  onClick={() => handlePresetChange(preset.value)}
-                  className={cn(
-                    'min-h-10 rounded-xl border px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75]',
-                    datePreset === preset.value
-                      ? 'border-[#1D9E75] bg-[#1D9E75] text-white'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                  )}
-                >
-                  {preset.label}
-                </button>
-              ))}
+            <div className="w-full rounded-2xl border border-slate-100 bg-white/80 p-3 shadow-sm lg:w-64">
+              <label htmlFor="analytics-period" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Analytics period
+              </label>
+              <select
+                id="analytics-period"
+                value={datePreset}
+                onChange={(event) => handlePeriodChange(event.target.value as ActiveDatePreset)}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+              >
+                {datePresets.map((preset) => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.label}
+                  </option>
+                ))}
+                <option value="custom">Custom range</option>
+              </select>
+              <p className="mt-2 text-xs text-slate-500">{rangeLabel}</p>
             </div>
           </div>
 
@@ -475,20 +527,41 @@ export default function InvoicesPage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-                <Filter className="h-4 w-4 text-[#1D9E75]" />
-                Search and filters
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">Search invoice, patient, phone, father name, token, disease, amount, or payment type.</p>
+        <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm md:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
+              <label htmlFor="invoice-search" className="sr-only">
+                Search invoices
+              </label>
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="invoice-search"
+                type="text"
+                placeholder="Search invoice, patient, phone, token, disease, amount..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+              />
             </div>
+
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+              >
+                <Filter className="h-4 w-4 text-[#1D9E75]" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-[#1D9E75] px-2 py-0.5 text-xs font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
                 onClick={exportCsv}
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
               >
                 <Download className="h-4 w-4" />
                 Export CSV
@@ -496,7 +569,7 @@ export default function InvoicesPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
               >
                 <RefreshCw className="h-4 w-4" />
                 Reset
@@ -504,177 +577,224 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(240px,2fr)_repeat(2,minmax(150px,1fr))]">
-            <div className="relative">
-              <label htmlFor="invoice-search" className="mb-1 block text-xs font-semibold text-slate-600">
-                Search
-              </label>
-              <Search className="absolute left-3 top-[38px] h-4 w-4 text-slate-400" />
-              <input
-                id="invoice-search"
-                type="text"
-                placeholder="Invoice, patient, phone, token, disease, amount..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="date-from" className="mb-1 block text-xs font-semibold text-slate-600">
-                From
-              </label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="date-from"
-                  type="date"
-                  value={dateRange.from}
-                  onChange={(event) => {
-                    setDatePreset('custom')
-                    setDateRange((current) => ({ ...current, from: event.target.value }))
-                  }}
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="date-to" className="mb-1 block text-xs font-semibold text-slate-600">
-                To
-              </label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="date-to"
-                  type="date"
-                  value={dateRange.to}
-                  onChange={(event) => {
-                    setDatePreset('custom')
-                    setDateRange((current) => ({ ...current, to: event.target.value }))
-                  }}
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <div>
-              <label htmlFor="date-basis" className="mb-1 block text-xs font-semibold text-slate-600">
-                Date basis
-              </label>
-              <select
-                id="date-basis"
-                value={dateBasis}
-                onChange={(event) => setDateBasis(event.target.value as DateBasis)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              >
-                <option value="activity">Invoice or payment date</option>
-                <option value="invoice">Invoice created date</option>
-                <option value="payment">Payment received date</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="payment-status" className="mb-1 block text-xs font-semibold text-slate-600">
-                Payment status
-              </label>
-              <select
-                id="payment-status"
-                value={paymentStatusFilter}
-                onChange={(event) => setPaymentStatusFilter(event.target.value as PaymentStatusFilter)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              >
-                <option value="all">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="paid_cash">Paid cash</option>
-                <option value="paid_online">Paid online</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="payment-method" className="mb-1 block text-xs font-semibold text-slate-600">
-                Method
-              </label>
-              <select
-                id="payment-method"
-                value={paymentMethodFilter}
-                onChange={(event) => setPaymentMethodFilter(event.target.value as PaymentMethodFilter)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              >
-                <option value="all">All methods</option>
-                <option value="cash">Cash</option>
-                <option value="online_upi">Online / UPI</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="visit-type" className="mb-1 block text-xs font-semibold text-slate-600">
-                Visit type
-              </label>
-              <select
-                id="visit-type"
-                value={visitTypeFilter}
-                onChange={(event) => setVisitTypeFilter(event.target.value as VisitTypeFilter)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              >
-                <option value="all">All visits</option>
-                <option value="first_visit">First-time</option>
-                <option value="follow_up">Repeat</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="discount-filter" className="mb-1 block text-xs font-semibold text-slate-600">
-                Discount
-              </label>
-              <select
-                id="discount-filter"
-                value={discountFilter}
-                onChange={(event) => setDiscountFilter(event.target.value as DiscountFilter)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-              >
-                <option value="all">All invoices</option>
-                <option value="with_discount">With discount</option>
-                <option value="without_discount">Without discount</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label htmlFor="min-amount" className="mb-1 block text-xs font-semibold text-slate-600">
-                  Min
-                </label>
-                <input
-                  id="min-amount"
-                  type="number"
-                  min="0"
-                  inputMode="decimal"
-                  value={minAmount}
-                  onChange={(event) => setMinAmount(event.target.value)}
-                  placeholder="0"
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                />
-              </div>
-              <div>
-                <label htmlFor="max-amount" className="mb-1 block text-xs font-semibold text-slate-600">
-                  Max
-                </label>
-                <input
-                  id="max-amount"
-                  type="number"
-                  min="0"
-                  inputMode="decimal"
-                  value={maxAmount}
-                  onChange={(event) => setMaxAmount(event.target.value)}
-                  placeholder="9999"
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
-                />
-              </div>
-            </div>
-          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Showing {filtered.length} of {periodInvoiceCount} invoices for {rangeLabel}.
+          </p>
         </section>
+
+        {filtersOpen && (
+          <div className="fixed inset-0 z-50">
+            <button
+              type="button"
+              aria-label="Close filters"
+              onClick={() => setFiltersOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="invoice-filter-title"
+              className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#1D9E75]">Invoice filters</p>
+                  <h3 id="invoice-filter-title" className="mt-1 text-lg font-bold text-slate-900">
+                    Refine report
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">Adjust date, payment, visit, discount, and amount filters.</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close filter panel"
+                  onClick={() => setFiltersOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-5 overflow-y-auto p-5">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <h4 className="text-sm font-bold text-slate-900">Custom date range</h4>
+                  <p className="mt-1 text-xs text-slate-500">Changing these dates switches the analytics period to custom.</p>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="date-from" className="mb-1 block text-xs font-semibold text-slate-600">
+                        From
+                      </label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          id="date-from"
+                          type="date"
+                          value={dateRange.from}
+                          onChange={(event) => {
+                            setDatePreset('custom')
+                            setDateRange((current) => ({ ...current, from: event.target.value }))
+                          }}
+                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="date-to" className="mb-1 block text-xs font-semibold text-slate-600">
+                        To
+                      </label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          id="date-to"
+                          type="date"
+                          value={dateRange.to}
+                          onChange={(event) => {
+                            setDatePreset('custom')
+                            setDateRange((current) => ({ ...current, to: event.target.value }))
+                          }}
+                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label htmlFor="date-basis" className="mb-1 block text-xs font-semibold text-slate-600">
+                      Date basis
+                    </label>
+                    <select
+                      id="date-basis"
+                      value={dateBasis}
+                      onChange={(event) => setDateBasis(event.target.value as DateBasis)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    >
+                      <option value="activity">Invoice or payment date</option>
+                      <option value="invoice">Invoice created date</option>
+                      <option value="payment">Payment received date</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="payment-status" className="mb-1 block text-xs font-semibold text-slate-600">
+                      Payment status
+                    </label>
+                    <select
+                      id="payment-status"
+                      value={paymentStatusFilter}
+                      onChange={(event) => setPaymentStatusFilter(event.target.value as PaymentStatusFilter)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="paid_cash">Paid cash</option>
+                      <option value="paid_online">Paid online</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="payment-method" className="mb-1 block text-xs font-semibold text-slate-600">
+                      Method
+                    </label>
+                    <select
+                      id="payment-method"
+                      value={paymentMethodFilter}
+                      onChange={(event) => setPaymentMethodFilter(event.target.value as PaymentMethodFilter)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    >
+                      <option value="all">All methods</option>
+                      <option value="cash">Cash</option>
+                      <option value="online_upi">Online / UPI</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="visit-type" className="mb-1 block text-xs font-semibold text-slate-600">
+                      Visit type
+                    </label>
+                    <select
+                      id="visit-type"
+                      value={visitTypeFilter}
+                      onChange={(event) => setVisitTypeFilter(event.target.value as VisitTypeFilter)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    >
+                      <option value="all">All visits</option>
+                      <option value="first_visit">First-time</option>
+                      <option value="follow_up">Repeat</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="discount-filter" className="mb-1 block text-xs font-semibold text-slate-600">
+                      Discount
+                    </label>
+                    <select
+                      id="discount-filter"
+                      value={discountFilter}
+                      onChange={(event) => setDiscountFilter(event.target.value as DiscountFilter)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                    >
+                      <option value="all">All invoices</option>
+                      <option value="with_discount">With discount</option>
+                      <option value="without_discount">Without discount</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="min-amount" className="mb-1 block text-xs font-semibold text-slate-600">
+                        Min amount
+                      </label>
+                      <input
+                        id="min-amount"
+                        type="number"
+                        min="0"
+                        inputMode="decimal"
+                        value={minAmount}
+                        onChange={(event) => setMinAmount(event.target.value)}
+                        placeholder="0"
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="max-amount" className="mb-1 block text-xs font-semibold text-slate-600">
+                        Max amount
+                      </label>
+                      <input
+                        id="max-amount"
+                        type="number"
+                        min="0"
+                        inputMode="decimal"
+                        value={maxAmount}
+                        onChange={(event) => setMaxAmount(event.target.value)}
+                        placeholder="9999"
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 border-t border-slate-100 p-5">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  className="min-h-11 flex-1 rounded-xl bg-[#1D9E75] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#15805e] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                >
+                  Apply filters
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
 
         <div className="card overflow-hidden">
           {loading ? (

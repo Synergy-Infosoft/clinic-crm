@@ -147,14 +147,31 @@ Validation performed:
 - `npm run test` ? passed, 5 tests.
 - `npm run build` ? passed.
 
-## Invoice owner analytics and filters
+## Invoice analytics UI refinement
+
+Updated: 2026-06-23T12:25:00.000Z
+
+- Replaced the scattered analytics period buttons with a compact `Analytics period` select.
+- Added a `Last 1 year` analytics period.
+- Moved detailed invoice filters into a right-side slide-over panel to reduce page clutter.
+- Kept the main invoice page focused on analytics cards, search, export, reset, and the invoice table.
+- Added a filter count badge so active advanced filters remain visible while the panel is closed.
+
+Validation performed:
+
+- `npm run typecheck` ? passed.
+- `npm run lint` ? passed.
+- `npm run test` ? passed, 5 tests.
+- `npm run build` ? passed.
+
+## Invoice collection analytics and filters
 
 Updated: 2026-06-23T12:05:00.000Z
 
 - Upgraded the `/invoices` page with a collection and patient analytics summary.
 - Added selected-range summary cards for total collection, cash collection, online/UPI collection, average bill, patient count, repeat patients, discount given, and pending amount.
 - Collection metrics now count paid invoices by `paid_at`; pending amount and patient visit counts use invoices created in the selected date range.
-- Added quick date controls for Today, Yesterday, 2 days ago, Last 7 days, This week, and This month.
+- Added analytics period support for Today, Yesterday, 2 days ago, Last 7 days, This week, and This month.
 - Added custom From/To date fields with a date-basis filter for invoice/payment/activity date.
 - Expanded invoice search to include invoice number, patient name, phone, father name, token number, disease/complaint, payment type, dates, and amounts.
 - Added filters for payment status, payment method, visit type, discount status, and amount range.
@@ -169,3 +186,20 @@ Validation performed:
 - `npm run lint` ? passed.
 - `npm run test` ? passed, 5 tests.
 - `npm run build` ? passed.
+
+## Patient profile detail layout
+
+Updated: 2026-06-23T12:40:00.000Z
+
+- Redesigned the patient detail page with a clearer profile header, visit summary counters, and responsive two-column layout.
+- Added a full registration details section showing full name, father name, age/gender, phone, address, referral source, and registration timestamp.
+- Added a latest visit summary with visit type, consultation date/time, registration source, doctor, and current status.
+- Expanded visit history cards to show token number, consultation schedule, visit type, registered-by source, doctor, status, chief complaint/disease, notes, and prescription when available.
+- Replaced hidden/conditional patient fields with explicit `Not provided` states so staff can see what was collected versus missing.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 5 tests.
+- `npm run build` - passed.
