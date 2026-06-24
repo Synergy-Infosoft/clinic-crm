@@ -6,6 +6,10 @@ import { ToastProvider } from "@/components/ui/Toast";
 export const metadata = {
   title: "Clinic Management System",
   description: "Clinic Appointment & Reception Management System",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon.svg"],
+  },
 };
 
 export default function RootLayout({

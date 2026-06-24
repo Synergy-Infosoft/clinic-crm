@@ -96,6 +96,21 @@ function getDoctorSubtitle(doctor: Doctor) {
   return doctor.specialization?.trim() || 'General'
 }
 
+function getDoctorDeleteErrorMessage(error: unknown) {
+  const errorRecord = error as { code?: unknown; message?: unknown; details?: unknown }
+  const code = typeof errorRecord?.code === 'string' ? errorRecord.code : ''
+  const message = [
+    typeof errorRecord?.message === 'string' ? errorRecord.message : '',
+    typeof errorRecord?.details === 'string' ? errorRecord.details : '',
+  ].join(' ')
+
+  if (code === '23503' || /foreign key|still referenced|violates foreign key/i.test(message)) {
+    return 'This doctor has visit history. Use Hide instead to remove them from registration while preserving records.'
+  }
+
+  return 'Unable to delete doctor'
+}
+
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
@@ -334,6 +349,25 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Failed to update doctor status:', error)
       toast.error('Unable to update doctor status')
+    } finally {
+      setSavingDoctorId(null)
+    }
+  }
+
+  const deleteDoctor = async (doctor: Doctor) => {
+    const confirmed = window.confirm(
+      `Delete ${doctor.name} permanently?\n\nThis cannot be undone. If this doctor has visit history, deletion will be blocked and you can use Hide instead.`
+    )
+    if (!confirmed) return
+
+    setSavingDoctorId(doctor.id)
+    try {
+      await dataService.deleteDoctor(doctor.id)
+      await refreshDoctors()
+      toast.success('Doctor deleted')
+    } catch (error) {
+      console.error('Failed to delete doctor:', error)
+      toast.error(getDoctorDeleteErrorMessage(error))
     } finally {
       setSavingDoctorId(null)
     }
@@ -615,7 +649,7 @@ export default function SettingsPage() {
                             value={doctor.specialization ?? ''}
                             onChange={(event) => updateDoctorField(doctor.id, 'specialization', event.target.value)}
                           />
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <Button type="button" variant="outline" onClick={() => saveDoctor(doctor)} loading={savingDoctorId === doctor.id}>
                               <Save className="w-4 h-4" />
                               Save
@@ -629,6 +663,17 @@ export default function SettingsPage() {
                             >
                               {doctor.is_active ? <Power className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                               {doctor.is_active ? 'Hide' : 'Activate'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              onClick={() => deleteDoctor(doctor)}
+                              loading={savingDoctorId === doctor.id}
+                              title="Delete doctor permanently"
+                              aria-label={`Delete ${doctor.name} permanently`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
                             </Button>
                           </div>
                         </div>

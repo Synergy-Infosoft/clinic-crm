@@ -303,6 +303,16 @@ export async function updateDoctor(id: string, updates: Partial<Doctor>): Promis
   return data as Doctor
 }
 
+export async function deleteDoctor(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('doctors')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
 // ─── Charge Presets ───────────────────────────────────────────────────────────
 
 export async function getChargePresets(): Promise<ChargePreset[]> {

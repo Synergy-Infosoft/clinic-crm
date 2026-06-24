@@ -259,3 +259,32 @@ Validation performed:
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
 - `supabase db advisors --linked --type security` - completed; only existing `auth_leaked_password_protection` warning remains.
+
+## Default favicon
+
+Updated: 2026-06-24T16:09:35.1588112+05:30
+
+- Added a vector SVG favicon at `public/favicon.svg` with a clean medical cross mark.
+- Wired the favicon into the root Next.js metadata so browsers can load it reliably.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run build` - passed.
+
+## Doctor delete action
+
+Updated: 2026-06-24T16:15:04.3215519+05:30
+
+- Added a permanent Delete action beside Save and Hide/Activate in Settings > Doctor List.
+- Added a confirmation step before deletion because this is destructive.
+- Added Supabase data-service support for deleting doctor rows.
+- Kept historical data safe: if a doctor has linked visit records, deletion is blocked with guidance to use Hide instead.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
