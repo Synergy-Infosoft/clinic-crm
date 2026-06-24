@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Building2,
   Check,
@@ -28,7 +28,6 @@ import { useBranding } from '@/context/BrandingContext'
 import { defaultWorkingSchedule, splitClinicScheduleExample } from '@/lib/registration'
 import {
   defaultBrandTheme,
-  applyBrandThemeToDocument,
   deriveHoverColor,
   deriveLightColor,
   normalizeBrandTheme,
@@ -115,7 +114,7 @@ function getDoctorDeleteErrorMessage(error: unknown) {
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
-  const { settings: appliedBranding, refreshBranding } = useBranding()
+  const { settings: appliedBranding, refreshBranding, setThemeOverride } = useBranding()
   const [settings, setSettings] = useState<ClinicSettings>(emptySettings)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
@@ -127,22 +126,14 @@ export default function SettingsPage() {
 
   const brandPreview = useMemo(() => normalizeBrandTheme(settings), [settings])
   const activeDoctors = doctors.filter((doctor) => doctor.is_active)
-  const appliedBrandThemeRef = useRef(normalizeBrandTheme(appliedBranding))
-
-  useEffect(() => {
-    appliedBrandThemeRef.current = normalizeBrandTheme(appliedBranding)
-  }, [appliedBranding])
 
   useEffect(() => {
     if (loading || authLoading) return
-    applyBrandThemeToDocument(brandPreview)
-  }, [authLoading, brandPreview, loading])
-
-  useEffect(() => {
+    setThemeOverride?.(brandPreview)
     return () => {
-      applyBrandThemeToDocument(appliedBrandThemeRef.current)
+      setThemeOverride?.(null)
     }
-  }, [])
+  }, [authLoading, brandPreview, loading, setThemeOverride])
 
   useEffect(() => {
     const loadSettings = async () => {

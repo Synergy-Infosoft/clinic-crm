@@ -1,13 +1,14 @@
 "use client"
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { applyBrandThemeToDocument, normalizeBrandTheme } from '@/lib/brandTheme'
+import { applyBrandThemeToDocument, normalizeBrandTheme, type BrandThemeSettings } from '@/lib/brandTheme'
 import { fallbackClinicSettings, type PublicClinicSettings } from '@/lib/registration'
 
 interface BrandingContextValue {
   settings: PublicClinicSettings
   loading: boolean
   refreshBranding: () => Promise<void>
+  setThemeOverride: (theme: BrandThemeSettings | null) => void
 }
 
 const BrandingContext = createContext<BrandingContextValue | undefined>(undefined)
@@ -34,13 +35,15 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   }, [refreshBranding])
 
   const theme = useMemo(() => normalizeBrandTheme(settings), [settings])
+  const [themeOverride, setThemeOverride] = useState<BrandThemeSettings | null>(null)
+  const activeTheme = useMemo(() => themeOverride ?? theme, [themeOverride, theme])
 
   useEffect(() => {
-    applyBrandThemeToDocument(theme)
-  }, [theme])
+    applyBrandThemeToDocument(activeTheme)
+  }, [activeTheme])
 
   const value = useMemo(
-    () => ({ settings: { ...settings, ...theme }, loading, refreshBranding }),
+    () => ({ settings: { ...settings, ...theme }, loading, refreshBranding, setThemeOverride }),
     [loading, refreshBranding, settings, theme]
   )
 
