@@ -6,16 +6,16 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ClipboardList, Copy, Download, ExternalLink, Printer, Smartphone } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
-import { useBranding } from '@/lib/brandTheme'
+import { useBranding } from '@/context/BrandingContext'
 
 // Dynamically import QRCode to avoid SSR issues (it uses canvas/window internals)
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false })
 
 export default function QRCodePage() {
   const toast = useToast()
-  const { branding } = useBranding()
+  const { settings } = useBranding()
   const [registrationUrl, setRegistrationUrl] = useState('')
-  const clinicName = branding?.clinicName || 'Clinic'
+  const clinicName = settings?.clinic_name || 'Clinic'
 
   useEffect(() => {
     const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
