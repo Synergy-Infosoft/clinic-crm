@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { fallbackClinicSettings, isClinicOpenNow, registrationSchema } from './registration'
+import {
+  fallbackClinicSettings,
+  getAvailableConsultationTimes,
+  getConsultationSlotError,
+  isClinicOpenNow,
+  isConsultationSlotAvailable,
+  registrationSchema,
+} from './registration'
 
 describe('registrationSchema', () => {
   const validInput = {
@@ -27,6 +34,15 @@ describe('registrationSchema', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it('rejects invalid calendar dates and times', () => {
+    const result = registrationSchema.safeParse({
+      ...validInput,
+      consultation_date: '2026-02-31',
+      consultation_time: '25:00',
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('isClinicOpenNow', () => {
@@ -41,8 +57,6 @@ describe('isClinicOpenNow', () => {
     expect(isClinicOpenNow(settings, new Date('2026-06-23T06:30:00.000Z'))).toBe(true)
     expect(isClinicOpenNow(settings, new Date('2026-06-23T14:00:00.000Z'))).toBe(false)
   })
-
-
 
   it('closes between split clinic sessions', () => {
     const splitSettings = {
@@ -60,5 +74,42 @@ describe('isClinicOpenNow', () => {
 
   it('closes on excluded weekdays', () => {
     expect(isClinicOpenNow(settings, new Date('2026-06-21T06:30:00.000Z'))).toBe(false)
+  })
+})
+
+describe('consultation slot validation', () => {
+  const splitSettings = {
+    ...fallbackClinicSettings,
+    working_days: [2],
+    working_schedule: [
+      { day: 2, enabled: true, slots: [{ start: '08:00', end: '14:00' }, { start: '17:00', end: '21:00' }] },
+    ],
+  }
+
+  it('accepts times inside split sessions and rejects gaps or closing time', () => {
+    expect(isConsultationSlotAvailable(splitSettings, '2026-06-23', '10:30')).toBe(true)
+    expect(isConsultationSlotAvailable(splitSettings, '2026-06-23', '15:00')).toBe(false)
+    expect(isConsultationSlotAvailable(splitSettings, '2026-06-23', '18:30')).toBe(true)
+    expect(isConsultationSlotAvailable(splitSettings, '2026-06-23', '21:00')).toBe(false)
+  })
+
+  it('generates selectable appointment times from dynamic settings', () => {
+    const times = getAvailableConsultationTimes(splitSettings, '2026-06-23', 60, { includePast: true })
+    expect(times).toEqual(['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '17:00', '18:00', '19:00', '20:00'])
+  })
+
+  it('returns helpful errors for closed days and outside working hours', () => {
+    expect(getConsultationSlotError(splitSettings, '2026-06-24', '10:00', { enforceFuture: false })).toContain('closed')
+    expect(getConsultationSlotError(splitSettings, '2026-06-23', '15:00', { enforceFuture: false })).toContain('clinic schedule')
+  })
+
+  it('rejects past public appointment slots in the clinic timezone', () => {
+    const error = getConsultationSlotError(
+      splitSettings,
+      '2026-06-23',
+      '08:00',
+      { now: new Date('2026-06-23T04:00:00.000Z') }
+    )
+    expect(error).toContain('future consultation time')
   })
 })

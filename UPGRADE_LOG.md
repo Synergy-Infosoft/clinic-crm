@@ -218,3 +218,22 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 5 tests.
 - `npm run build` - passed.
+
+## Dynamic consultation slot validation
+
+Updated: 2026-06-24T15:37:39.9842719+05:30
+
+- Added shared registration schedule helpers that read the clinic's dynamic `working_schedule`, including split morning/evening sessions.
+- Public registration now validates the selected consultation date and time against the current Settings schedule before creating a token.
+- Public registration still respects the existing "registration open only during clinic hours" guard, but now also blocks future/outside-slot selections such as a 3 PM appointment during a 2 PM-5 PM break.
+- The public QR form now shows selectable appointment times generated from Settings instead of a free time input.
+- The public QR form shows the configured schedule for the selected date and disables submission when no valid future slots are available.
+- Staff manual registration now loads Settings dynamically, shows schedule warnings, and allows an intentional override after confirmation.
+- Added unit coverage for invalid dates/times, split-session availability, generated appointment options, closed days, outside-hours errors, and past public slots.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.

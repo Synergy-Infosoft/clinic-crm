@@ -25,8 +25,14 @@ export const registrationSchema = z.object({
   address: z.string().trim().max(500).optional(),
   referral_source: z.union([z.enum(referralSources), z.literal('')]).optional(),
   visit_type: z.enum(visitTypes),
-  consultation_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a consultation date'),
-  consultation_time: z.string().regex(/^\d{2}:\d{2}$/, 'Please select a consultation time'),
+  consultation_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a consultation date')
+    .refine(isDateInput, 'Please select a valid consultation date'),
+  consultation_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Please select a consultation time')
+    .refine(isTime, 'Please select a valid consultation time'),
 })
 
 export type RegistrationInput = z.input<typeof registrationSchema>
@@ -62,8 +68,21 @@ export const splitClinicScheduleExample: ClinicDaySchedule[] = [
   { day: 0, enabled: true, slots: [{ start: '09:00', end: '13:00' }] },
 ]
 
-function isTime(value: unknown): value is string {
-  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)
+export function isTime(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return false
+  const [hour, minute] = value.split(':').map(Number)
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59
+}
+
+export function isDateInput(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  )
 }
 
 function normalizeSlot(slot: unknown): WorkingHoursSlot | null {
@@ -93,7 +112,7 @@ export function normalizeWorkingSchedule(
       byDay.set(day, {
         day,
         enabled: Boolean(candidate.enabled) && slots.length > 0,
-        slots: slots.slice(0, 3),
+        slots: slots.slice(0, 3).sort((a, b) => a.start.localeCompare(b.start)),
       })
     }
   }
@@ -111,7 +130,7 @@ export function normalizeWorkingSchedule(
 }
 
 export function formatTimeRange(slot: WorkingHoursSlot) {
-  return `${slot.start}?${slot.end}`
+  return `${formatTimeLabel(slot.start)} - ${formatTimeLabel(slot.end)}`
 }
 
 export function formatWorkingScheduleSummary(settings: PublicClinicSettings) {
@@ -119,7 +138,7 @@ export function formatWorkingScheduleSummary(settings: PublicClinicSettings) {
   return settings.working_schedule
     .filter((day) => day.enabled && day.slots.length > 0)
     .map((day) => `${days[day.day]} ${day.slots.map(formatTimeRange).join(', ')}`)
-    .join(' ? ')
+    .join(' | ')
 }
 
 export interface PublicClinicSettings {
@@ -148,6 +167,146 @@ export const fallbackClinicSettings: PublicClinicSettings = {
   timezone: 'Asia/Kolkata',
 }
 
+function getNormalizedSchedule(settings: PublicClinicSettings) {
+  return normalizeWorkingSchedule(
+    settings.working_schedule,
+    settings.working_days,
+    settings.working_hours_start.slice(0, 5),
+    settings.working_hours_end.slice(0, 5)
+  )
+}
+
+function toMinutes(time: string) {
+  if (!isTime(time)) return null
+  const [hour, minute] = time.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function fromMinutes(totalMinutes: number) {
+  const hour = Math.floor(totalMinutes / 60)
+  const minute = totalMinutes % 60
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+}
+
+function getDayIndexFromDateInput(dateInput: string) {
+  if (!isDateInput(dateInput)) return null
+  const [year, month, day] = dateInput.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+}
+
+export function getClinicDateTimeParts(settings: Pick<PublicClinicSettings, 'timezone'>, now = new Date()) {
+  const timeZone = settings.timezone || fallbackClinicSettings.timezone
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+  return {
+    date: `${value('year')}-${value('month')}-${value('day')}`,
+    time: `${value('hour') || '00'}:${value('minute') || '00'}`,
+  }
+}
+
+export function formatTimeLabel(time: string) {
+  const minutes = toMinutes(time)
+  if (minutes === null) return time
+  const hour = Math.floor(minutes / 60)
+  const minute = minutes % 60
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`
+}
+
+export function getWorkingSlotsForDate(settings: PublicClinicSettings, consultationDate: string) {
+  const day = getDayIndexFromDateInput(consultationDate)
+  if (day === null) return []
+
+  const entry = getNormalizedSchedule(settings).find((item) => item.day === day)
+  return entry?.enabled ? entry.slots : []
+}
+
+export function isConsultationSlotAvailable(
+  settings: PublicClinicSettings,
+  consultationDate: string,
+  consultationTime: string
+) {
+  const selectedMinutes = toMinutes(consultationTime)
+  if (!isDateInput(consultationDate) || selectedMinutes === null) return false
+
+  return getWorkingSlotsForDate(settings, consultationDate).some((slot) => {
+    const start = toMinutes(slot.start)
+    const end = toMinutes(slot.end)
+    return start !== null && end !== null && selectedMinutes >= start && selectedMinutes < end
+  })
+}
+
+export function getAvailableConsultationTimes(
+  settings: PublicClinicSettings,
+  consultationDate: string,
+  intervalMinutes = 15,
+  options: { includePast?: boolean; now?: Date } = {}
+) {
+  if (!isDateInput(consultationDate) || intervalMinutes <= 0) return []
+
+  const clinicNow = getClinicDateTimeParts(settings, options.now)
+  const currentMinutes = toMinutes(clinicNow.time) ?? 0
+  const times = new Set<string>()
+
+  for (const slot of getWorkingSlotsForDate(settings, consultationDate)) {
+    const start = toMinutes(slot.start)
+    const end = toMinutes(slot.end)
+    if (start === null || end === null) continue
+
+    for (let minute = start; minute < end; minute += intervalMinutes) {
+      if (!options.includePast && consultationDate === clinicNow.date && minute < currentMinutes) continue
+      times.add(fromMinutes(minute))
+    }
+  }
+
+  return [...times].sort()
+}
+
+export function getConsultationSlotError(
+  settings: PublicClinicSettings,
+  consultationDate: string,
+  consultationTime: string,
+  options: { enforceFuture?: boolean; now?: Date } = {}
+) {
+  if (!isDateInput(consultationDate)) return 'Please select a valid consultation date.'
+  if (!isTime(consultationTime)) return 'Please select a valid consultation time.'
+
+  if (options.enforceFuture !== false) {
+    const clinicNow = getClinicDateTimeParts(settings, options.now)
+    const selectedMinutes = toMinutes(consultationTime) ?? 0
+    const currentMinutes = toMinutes(clinicNow.time) ?? 0
+
+    if (consultationDate < clinicNow.date) {
+      return 'Please select today or a future consultation date.'
+    }
+
+    if (consultationDate === clinicNow.date && selectedMinutes < currentMinutes) {
+      return 'Please select a future consultation time.'
+    }
+  }
+
+  const slots = getWorkingSlotsForDate(settings, consultationDate)
+  if (slots.length === 0) {
+    return 'The clinic is closed on the selected date. Please choose another date.'
+  }
+
+  if (!isConsultationSlotAvailable(settings, consultationDate, consultationTime)) {
+    return `Please select a time within the clinic schedule for this date: ${slots.map(formatTimeRange).join(', ')}.`
+  }
+
+  return null
+}
+
 export function isClinicOpenNow(settings: PublicClinicSettings, now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: settings.timezone,
@@ -173,13 +332,7 @@ export function isClinicOpenNow(settings: PublicClinicSettings, now = new Date()
   const day = weekday ? weekdayIndex[weekday] : undefined
   if (day === undefined) return false
 
-  const schedule = normalizeWorkingSchedule(
-    settings.working_schedule,
-    settings.working_days,
-    settings.working_hours_start.slice(0, 5),
-    settings.working_hours_end.slice(0, 5)
-  )
-  const today = schedule.find((entry) => entry.day === day)
+  const today = getNormalizedSchedule(settings).find((entry) => entry.day === day)
   return Boolean(
     today?.enabled &&
       today.slots.some((slot) => currentTime >= slot.start && currentTime <= slot.end)

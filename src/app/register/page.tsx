@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { Stethoscope, Shield, Clock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import * as dataService from '@/lib/dataService'
-import { fallbackClinicSettings, formatWorkingScheduleSummary, type PublicClinicSettings } from '@/lib/registration'
+import { fallbackClinicSettings, formatTimeLabel, formatTimeRange, formatWorkingScheduleSummary, getAvailableConsultationTimes, getClinicDateTimeParts, getConsultationSlotError, getWorkingSlotsForDate, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
 
 const schema = z.object({
@@ -80,6 +80,8 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
@@ -90,7 +92,51 @@ export default function RegisterPage() {
     },
   })
 
+  const selectedDate = watch('consultation_date')
+  const selectedTime = watch('consultation_time')
+  const clinicToday = useMemo(() => getClinicDateTimeParts(settings).date, [settings])
+  const selectedDateSlots = useMemo(
+    () => getWorkingSlotsForDate(settings, selectedDate),
+    [settings, selectedDate]
+  )
+  const availableTimes = useMemo(
+    () => getAvailableConsultationTimes(settings, selectedDate, 15),
+    [settings, selectedDate]
+  )
+  const selectedDateScheduleText = selectedDateSlots.map(formatTimeRange).join(', ')
+  const slotError = useMemo(() => {
+    if (selectedTime) return getConsultationSlotError(settings, selectedDate, selectedTime)
+    if (selectedDateSlots.length > 0 && availableTimes.length === 0) {
+      return 'No future appointment slots are available for the selected date.'
+    }
+    return null
+  }, [availableTimes.length, selectedDate, selectedDateSlots.length, selectedTime, settings])
+
+  useEffect(() => {
+    if (configLoading || !selectedDate) return
+
+    if (selectedDate < clinicToday) {
+      setValue('consultation_date', clinicToday, { shouldValidate: true })
+      return
+    }
+
+    if (availableTimes.length === 0) {
+      if (selectedTime) setValue('consultation_time', '', { shouldValidate: true })
+      return
+    }
+
+    if (!availableTimes.includes(selectedTime)) {
+      setValue('consultation_time', availableTimes[0], { shouldValidate: true })
+    }
+  }, [availableTimes, clinicToday, configLoading, selectedDate, selectedTime, setValue])
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
+    const selectedSlotError = getConsultationSlotError(settings, data.consultation_date, data.consultation_time)
+    if (selectedSlotError) {
+      toast.error(selectedSlotError)
+      return
+    }
+
     try {
       const result = await dataService.selfRegister({
         full_name: data.full_name,
@@ -266,36 +312,64 @@ export default function RegisterPage() {
             </div>
 
             {/* Consultation Date + Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Consultation Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
-                    errors.consultation_date ? 'border-red-400' : 'border-slate-300'
-                  }`}
-                  {...register('consultation_date')}
-                />
-                {errors.consultation_date && (
-                  <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
-                )}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Consultation Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    min={clinicToday}
+                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                      errors.consultation_date ? 'border-red-400' : 'border-slate-300'
+                    }`}
+                    {...register('consultation_date')}
+                  />
+                  {errors.consultation_date && (
+                    <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Consultation Time <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    disabled={configLoading || availableTimes.length === 0}
+                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 ${
+                      errors.consultation_time || slotError ? 'border-red-400' : 'border-slate-300'
+                    }`}
+                    {...register('consultation_time')}
+                  >
+                    <option value="">
+                      {availableTimes.length === 0 ? 'No available time' : 'Select time'}
+                    </option>
+                    {availableTimes.map((time) => (
+                      <option key={time} value={time}>
+                        {formatTimeLabel(time)}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.consultation_time && (
+                    <p className="mt-1.5 text-xs text-red-600">{errors.consultation_time.message}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Consultation Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
-                    errors.consultation_time ? 'border-red-400' : 'border-slate-300'
-                  }`}
-                  {...register('consultation_time')}
-                />
-                {errors.consultation_time && (
-                  <p className="mt-1.5 text-xs text-red-600">{errors.consultation_time.message}</p>
+              <div
+                className={`rounded-xl border px-3 py-2 text-xs ${
+                  slotError
+                    ? 'border-amber-200 bg-amber-50 text-amber-800'
+                    : selectedDateSlots.length > 0
+                      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                }`}
+              >
+                {selectedDateSlots.length > 0 ? (
+                  <p>Available on selected date: {selectedDateScheduleText}</p>
+                ) : (
+                  <p>Clinic is closed on the selected date. Please choose another day.</p>
                 )}
+                {slotError && <p className="mt-1 font-medium">{slotError}</p>}
               </div>
             </div>
 
@@ -386,7 +460,7 @@ export default function RegisterPage() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={isSubmitting || configLoading || !clinicOpen}
+              disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError)}
               className="w-full h-14 bg-[#1D9E75] hover:bg-[#0F6E56] disabled:opacity-60 text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1D9E75]/20 active:scale-[0.98]"
             >
               {isSubmitting ? (
@@ -399,10 +473,12 @@ export default function RegisterPage() {
                 </>
               ) : configLoading ? (
                 <>Checking reception hours...</>
-              ) : clinicOpen ? (
-                <>Get My Token Number</>
-              ) : (
+              ) : !clinicOpen ? (
                 <>Registration Closed</>
+              ) : availableTimes.length === 0 ? (
+                <>No Slots Available</>
+              ) : (
+                <>Get My Token Number</>
               )}
             </button>
           </form>

@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { AlertCircle, Clock } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -10,6 +12,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import * as dataService from '@/lib/dataService'
+import { fallbackClinicSettings, formatTimeRange, getConsultationSlotError, getWorkingSlotsForDate, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
 
 const schema = z.object({
@@ -57,10 +60,12 @@ interface AddVisitDialogProps {
 
 export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisitDialogProps) {
   const toast = useToast()
+  const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
@@ -71,7 +76,48 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
     },
   })
 
+  const selectedDate = watch('consultation_date')
+  const selectedTime = watch('consultation_time')
+  const selectedDateSlots = useMemo(
+    () => getWorkingSlotsForDate(settings, selectedDate),
+    [settings, selectedDate]
+  )
+  const selectedScheduleText = selectedDateSlots.map(formatTimeRange).join(', ')
+  const scheduleWarning = useMemo(
+    () => getConsultationSlotError(settings, selectedDate, selectedTime, { enforceFuture: false }),
+    [settings, selectedDate, selectedTime]
+  )
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    let mounted = true
+    dataService.getClinicSettings()
+      .then((clinicSettings) => {
+        if (mounted) setSettings(clinicSettings)
+      })
+      .catch(() => {
+        if (mounted) setSettings(fallbackClinicSettings)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [isOpen])
+
   const handleFormSubmit: SubmitHandler<FormData> = async (data) => {
+    const selectedSlotWarning = getConsultationSlotError(
+      settings,
+      data.consultation_date,
+      data.consultation_time,
+      { enforceFuture: false }
+    )
+
+    if (selectedSlotWarning) {
+      const shouldContinue = window.confirm(`${selectedSlotWarning}\n\nContinue as staff override?`)
+      if (!shouldContinue) return
+    }
+
     try {
       const result = await dataService.selfRegister({
         full_name: data.full_name,
@@ -87,7 +133,7 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
         consultation_date: data.consultation_date,
         consultation_time: data.consultation_time,
       })
-      toast.success(`Patient registered — Token #${result.token_number}`)
+      toast.success(`Patient registered - Token #${result.token_number}`)
       reset()
       onSuccess(result.visit_id, result.token_number, result.patient_name)
       onClose()
@@ -143,21 +189,50 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
           error={errors.phone?.message}
           {...register('phone')}
         />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Consultation Date"
-            type="date"
-            required
-            error={errors.consultation_date?.message}
-            {...register('consultation_date')}
-          />
-          <Input
-            label="Consultation Time"
-            type="time"
-            required
-            error={errors.consultation_time?.message}
-            {...register('consultation_time')}
-          />
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Consultation Date"
+              type="date"
+              required
+              error={errors.consultation_date?.message}
+              {...register('consultation_date')}
+            />
+            <Input
+              label="Consultation Time"
+              type="time"
+              required
+              error={errors.consultation_time?.message}
+              {...register('consultation_time')}
+            />
+          </div>
+          <div
+            className={`rounded-lg border px-3 py-2 text-xs ${
+              scheduleWarning
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-emerald-100 bg-emerald-50 text-emerald-800'
+            }`}
+          >
+            <div className="flex items-start gap-2">
+              {scheduleWarning ? (
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              ) : (
+                <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              )}
+              <div>
+                {selectedDateSlots.length > 0 ? (
+                  <p>Configured schedule for this date: {selectedScheduleText}</p>
+                ) : (
+                  <p>The clinic is closed on this date in Settings.</p>
+                )}
+                {scheduleWarning && (
+                  <p className="mt-1 font-medium">
+                    {scheduleWarning} Staff can continue only as an intentional override.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
         <Select
           label="Visit Type"
@@ -181,7 +256,7 @@ export function AddVisitDialog({ isOpen, onClose, onSuccess, doctors }: AddVisit
           label="Assign Doctor"
           options={doctors
             .filter((d) => d.is_active)
-            .map((d) => ({ value: d.id, label: `${d.name} — ${d.specialization || 'General'}` }))}
+            .map((d) => ({ value: d.id, label: `${d.name} - ${d.specialization || 'General'}` }))}
           placeholder="Any available doctor"
           error={errors.doctor_id?.message}
           {...register('doctor_id')}

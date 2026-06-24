@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { fallbackClinicSettings, formatWorkingScheduleSummary, isClinicOpenNow, normalizeWorkingSchedule, registrationSchema } from '@/lib/registration'
+import { fallbackClinicSettings, formatWorkingScheduleSummary, getConsultationSlotError, isClinicOpenNow, normalizeWorkingSchedule, registrationSchema } from '@/lib/registration'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
     return errorResponse('Please correct the highlighted fields', 400, parsed.error.flatten().fieldErrors)
   }
 
+  const input = parsed.data
+
   try {
     const admin = createAdminClient()
     const { data: settingsRow } = await admin
@@ -112,6 +114,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!user) {
+      const slotError = getConsultationSlotError(settings, input.consultation_date, input.consultation_time)
+      if (slotError) return errorResponse(slotError, 400)
+    }
+
     const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     const clientIp = forwardedFor || request.headers.get('x-real-ip') || 'unknown'
     const salt = process.env.REGISTRATION_RATE_LIMIT_SALT || process.env.NEXT_PUBLIC_SUPABASE_URL || 'clinic-registration'
@@ -119,7 +126,6 @@ export async function POST(request: NextRequest) {
       ? null
       : createHash('sha256').update(`${salt}:${clientIp}`).digest('hex')
 
-    const input = parsed.data
     const { data, error } = await admin.rpc('register_patient_atomic', {
       p_full_name: input.full_name,
       p_age: input.age,
