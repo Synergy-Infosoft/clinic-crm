@@ -6,13 +6,16 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ClipboardList, Copy, Download, ExternalLink, Printer, Smartphone } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useBranding } from '@/lib/brandTheme'
 
 // Dynamically import QRCode to avoid SSR issues (it uses canvas/window internals)
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false })
 
 export default function QRCodePage() {
   const toast = useToast()
+  const { branding } = useBranding()
   const [registrationUrl, setRegistrationUrl] = useState('')
+  const clinicName = branding?.clinicName || 'Clinic'
 
   useEffect(() => {
     const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -49,7 +52,7 @@ export default function QRCodePage() {
       ctx.fillText('Scan to Register', 320, 570)
       ctx.fillStyle = '#475569'
       ctx.font = '18px system-ui, sans-serif'
-      ctx.fillText('ClinicFlow Medical Center', 320, 605)
+      ctx.fillText(clinicName, 320, 605)
       canvas.toBlob((blob) => {
         if (!blob) return
         const url = URL.createObjectURL(blob)
@@ -107,7 +110,7 @@ export default function QRCodePage() {
             {/* Clinic label under QR */}
             <div className="mt-4 px-4 py-2 bg-[var(--primary)] rounded-xl">
               <p className="text-white text-xs font-bold tracking-wide text-center">
-                ClinicFlow Medical Center
+                {clinicName}
               </p>
             </div>
           </div>
