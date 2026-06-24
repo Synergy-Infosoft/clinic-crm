@@ -114,7 +114,7 @@ function getDoctorDeleteErrorMessage(error: unknown) {
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
-  const { settings: appliedBranding, refreshBranding, setThemeOverride } = useBranding()
+  const { refreshBranding, setThemeOverride } = useBranding()
   const [settings, setSettings] = useState<ClinicSettings>(emptySettings)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })

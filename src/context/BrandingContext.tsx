@@ -57,6 +57,7 @@ export function useBranding() {
       settings: fallbackClinicSettings,
       loading: false,
       refreshBranding: async () => {},
+      setThemeOverride: () => {},
     } satisfies BrandingContextValue
   }
   return context
