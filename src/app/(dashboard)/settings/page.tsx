@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Building2,
   Check,
@@ -28,6 +28,7 @@ import { useBranding } from '@/context/BrandingContext'
 import { defaultWorkingSchedule, splitClinicScheduleExample } from '@/lib/registration'
 import {
   defaultBrandTheme,
+  applyBrandThemeToDocument,
   deriveHoverColor,
   deriveLightColor,
   normalizeBrandTheme,
@@ -114,7 +115,7 @@ function getDoctorDeleteErrorMessage(error: unknown) {
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
-  const { refreshBranding } = useBranding()
+  const { settings: appliedBranding, refreshBranding } = useBranding()
   const [settings, setSettings] = useState<ClinicSettings>(emptySettings)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
@@ -126,6 +127,22 @@ export default function SettingsPage() {
 
   const brandPreview = useMemo(() => normalizeBrandTheme(settings), [settings])
   const activeDoctors = doctors.filter((doctor) => doctor.is_active)
+  const appliedBrandThemeRef = useRef(normalizeBrandTheme(appliedBranding))
+
+  useEffect(() => {
+    appliedBrandThemeRef.current = normalizeBrandTheme(appliedBranding)
+  }, [appliedBranding])
+
+  useEffect(() => {
+    if (loading || authLoading) return
+    applyBrandThemeToDocument(brandPreview)
+  }, [authLoading, brandPreview, loading])
+
+  useEffect(() => {
+    return () => {
+      applyBrandThemeToDocument(appliedBrandThemeRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -482,21 +499,37 @@ export default function SettingsPage() {
                       />
 
                       <div className="rounded-xl border border-slate-200 p-4">
-                        <p className="text-sm font-semibold text-slate-900 mb-3">Theme presets</p>
+                        <div className="mb-3">
+                          <p className="text-sm font-semibold text-slate-900">Theme presets</p>
+                          <p className="text-xs text-slate-500">Preview changes apply instantly. Save settings to publish them.</p>
+                        </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {themePresets.map((preset) => (
-                            <button
-                              key={preset.color}
-                              type="button"
-                              onClick={() => applyThemePreset(preset.color)}
-                              className="min-h-12 rounded-xl border border-slate-200 bg-white px-3 text-left hover:border-[var(--primary)] transition-colors"
-                            >
-                              <span className="flex items-center gap-2">
-                                <span className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: preset.color }} />
-                                <span className="text-sm font-medium text-slate-700">{preset.name}</span>
-                              </span>
-                            </button>
-                          ))}
+                          {themePresets.map((preset) => {
+                            const presetColor = normalizeHexColor(preset.color, preset.color)
+                            const isSelectedPreset = brandPreview.theme_color === presetColor
+
+                            return (
+                              <button
+                                key={preset.color}
+                                type="button"
+                                onClick={() => applyThemePreset(preset.color)}
+                                aria-pressed={isSelectedPreset}
+                                className={`min-h-12 rounded-xl border px-3 text-left transition-colors ${
+                                  isSelectedPreset
+                                    ? 'border-[var(--primary)] bg-[var(--primary-light)]'
+                                    : 'border-slate-200 bg-white hover:border-[var(--primary)]'
+                                }`}
+                              >
+                                <span className="flex items-center justify-between gap-2">
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: presetColor }} />
+                                    <span className="text-sm font-medium text-slate-700">{preset.name}</span>
+                                  </span>
+                                  {isSelectedPreset && <Check className="h-4 w-4 shrink-0 text-[var(--primary)]" />}
+                                </span>
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
 

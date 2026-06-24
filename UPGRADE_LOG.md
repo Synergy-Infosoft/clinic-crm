@@ -288,3 +288,18 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
+
+## Branding live preview controls
+
+Updated: 2026-06-24T17:26:20.7965368+05:30
+
+- Fixed Settings branding controls so theme presets, custom primary color, hover color, light tint, and restore defaults apply visually immediately while editing.
+- Added safe rollback behavior: if an admin leaves Settings without saving, the document theme returns to the saved clinic branding.
+- Added selected-state feedback and helper copy for theme preset buttons so admins can see which draft preset is active.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
