@@ -454,7 +454,7 @@ export default function InvoicesPage() {
                 id="analytics-period"
                 value={datePreset}
                 onChange={(event) => handlePeriodChange(event.target.value as ActiveDatePreset)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 {datePresets.map((preset) => (
                   <option key={preset.value} value={preset.value}>
@@ -540,7 +540,7 @@ export default function InvoicesPage() {
                 placeholder="Search invoice, patient, phone, token, disease, amount..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               />
             </div>
 
@@ -548,12 +548,12 @@ export default function InvoicesPage() {
               <button
                 type="button"
                 onClick={() => setFiltersOpen(true)}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
-                <Filter className="h-4 w-4 text-[#1D9E75]" />
+                <Filter className="h-4 w-4 text-[var(--primary)]" />
                 Filters
                 {activeFilterCount > 0 && (
-                  <span className="rounded-full bg-[#1D9E75] px-2 py-0.5 text-xs font-bold text-white">
+                  <span className="rounded-full bg-[var(--primary)] px-2 py-0.5 text-xs font-bold text-white">
                     {activeFilterCount}
                   </span>
                 )}
@@ -561,7 +561,7 @@ export default function InvoicesPage() {
               <button
                 type="button"
                 onClick={exportCsv}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 <Download className="h-4 w-4" />
                 Export CSV
@@ -569,7 +569,7 @@ export default function InvoicesPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 <RefreshCw className="h-4 w-4" />
                 Reset
@@ -598,7 +598,7 @@ export default function InvoicesPage() {
             >
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#1D9E75]">Invoice filters</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">Invoice filters</p>
                   <h3 id="invoice-filter-title" className="mt-1 text-lg font-bold text-slate-900">
                     Refine report
                   </h3>
@@ -608,7 +608,7 @@ export default function InvoicesPage() {
                   type="button"
                   aria-label="Close filter panel"
                   onClick={() => setFiltersOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -633,7 +633,7 @@ export default function InvoicesPage() {
                             setDatePreset('custom')
                             setDateRange((current) => ({ ...current, from: event.target.value }))
                           }}
-                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                         />
                       </div>
                     </div>
@@ -652,7 +652,7 @@ export default function InvoicesPage() {
                             setDatePreset('custom')
                             setDateRange((current) => ({ ...current, to: event.target.value }))
                           }}
-                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                          className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                         />
                       </div>
                     </div>
@@ -668,7 +668,7 @@ export default function InvoicesPage() {
                       id="date-basis"
                       value={dateBasis}
                       onChange={(event) => setDateBasis(event.target.value as DateBasis)}
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     >
                       <option value="activity">Invoice or payment date</option>
                       <option value="invoice">Invoice created date</option>
@@ -684,7 +684,7 @@ export default function InvoicesPage() {
                       id="payment-status"
                       value={paymentStatusFilter}
                       onChange={(event) => setPaymentStatusFilter(event.target.value as PaymentStatusFilter)}
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     >
                       <option value="all">All statuses</option>
                       <option value="pending">Pending</option>
@@ -701,7 +701,7 @@ export default function InvoicesPage() {
                       id="payment-method"
                       value={paymentMethodFilter}
                       onChange={(event) => setPaymentMethodFilter(event.target.value as PaymentMethodFilter)}
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     >
                       <option value="all">All methods</option>
                       <option value="cash">Cash</option>
@@ -717,7 +717,7 @@ export default function InvoicesPage() {
                       id="visit-type"
                       value={visitTypeFilter}
                       onChange={(event) => setVisitTypeFilter(event.target.value as VisitTypeFilter)}
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     >
                       <option value="all">All visits</option>
                       <option value="first_visit">First-time</option>
@@ -733,7 +733,7 @@ export default function InvoicesPage() {
                       id="discount-filter"
                       value={discountFilter}
                       onChange={(event) => setDiscountFilter(event.target.value as DiscountFilter)}
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     >
                       <option value="all">All invoices</option>
                       <option value="with_discount">With discount</option>
@@ -754,7 +754,7 @@ export default function InvoicesPage() {
                         value={minAmount}
                         onChange={(event) => setMinAmount(event.target.value)}
                         placeholder="0"
-                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                       />
                     </div>
                     <div>
@@ -769,7 +769,7 @@ export default function InvoicesPage() {
                         value={maxAmount}
                         onChange={(event) => setMaxAmount(event.target.value)}
                         placeholder="9999"
-                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                       />
                     </div>
                   </div>
@@ -780,14 +780,14 @@ export default function InvoicesPage() {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setFiltersOpen(false)}
-                  className="min-h-11 flex-1 rounded-xl bg-[#1D9E75] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#15805e] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  className="min-h-11 flex-1 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 >
                   Apply filters
                 </button>
@@ -799,7 +799,7 @@ export default function InvoicesPage() {
         <div className="card overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1D9E75] border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -881,7 +881,7 @@ export default function InvoicesPage() {
                               event.stopPropagation()
                               handleMarkAsPaid(invoice.id)
                             }}
-                            className="whitespace-nowrap rounded-lg bg-[#1D9E75] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#15805e] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                            className="whitespace-nowrap rounded-lg bg-[var(--primary)] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                           >
                             Mark cash paid
                           </button>

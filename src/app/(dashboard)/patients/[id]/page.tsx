@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, type ComponentType } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -128,7 +128,7 @@ export default function PatientProfilePage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center p-6">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1D9E75] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
         </div>
       </DashboardLayout>
     )
@@ -160,12 +160,12 @@ export default function PatientProfilePage() {
             type="button"
             aria-label="Back to patients"
             onClick={() => router.push('/patients')}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1D9E75]">Patient profile</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">Patient profile</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900 md:text-3xl">{patient.full_name}</h1>
             <p className="mt-1 text-sm text-slate-500">Registered on {formatDate(patient.created_at, 'MMMM d, yyyy')}</p>
           </div>
@@ -175,7 +175,7 @@ export default function PatientProfilePage() {
           <div className="bg-gradient-to-br from-emerald-50 via-white to-blue-50 p-5 md:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-[#1D9E75] text-4xl font-bold text-white shadow-sm">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-[var(--primary)] text-4xl font-bold text-white shadow-sm">
                   {patientInitial}
                 </div>
                 <div>
@@ -188,7 +188,7 @@ export default function PatientProfilePage() {
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                      <Phone className="h-3.5 w-3.5 text-[#1D9E75]" />
+                      <Phone className="h-3.5 w-3.5 text-[var(--primary)]" />
                       {patient.phone}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
@@ -266,7 +266,7 @@ export default function PatientProfilePage() {
             <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                  <Calendar className="h-5 w-5 text-[#1D9E75]" />
+                  <Calendar className="h-5 w-5 text-[var(--primary)]" />
                   Visit history
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">Complete visit, scheduling, and clinical details.</p>

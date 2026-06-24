@@ -93,7 +93,7 @@ export default function InvoiceDetailPage() {
     return (
       <DashboardLayout>
         <div className="p-6 flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
       </DashboardLayout>
     );
@@ -272,7 +272,7 @@ export default function InvoiceDetailPage() {
                     )}
                     <div className="border-t border-slate-200 pt-2 flex justify-between">
                       <span className="text-base font-bold text-slate-900">Total</span>
-                      <span className="text-base font-bold text-[#1D9E75]">{formatCurrency(invoice.total)}</span>
+                      <span className="text-base font-bold text-[var(--primary)]">{formatCurrency(invoice.total)}</span>
                     </div>
                   </div>
                 </div>

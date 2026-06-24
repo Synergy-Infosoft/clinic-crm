@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { BellRing, Clock3, Home, MapPin, RefreshCw, Smartphone } from 'lucide-react'
+import { useBranding } from '@/context/BrandingContext'
 
 interface RegistrationStatus {
   token_number: number
@@ -17,7 +18,7 @@ interface RegistrationStatus {
 function Confetti({ enabled }: { enabled: boolean }) {
   const pieces = useMemo(() => {
     if (!enabled) return []
-    const colors = ['#1D9E75', '#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA']
+    const colors = ['var(--primary)', '#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA']
     return Array.from({ length: 36 }, (_, id) => ({
       id,
       color: colors[id % colors.length],
@@ -55,11 +56,11 @@ function AnimatedCheckmark() {
   return (
     <div className="flex items-center justify-center mb-6" aria-hidden="true">
       <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-        <circle className="checkmark-circle" cx="50" cy="50" r="44" stroke="#1D9E75" strokeWidth="4" />
+        <circle className="checkmark-circle" cx="50" cy="50" r="44" stroke="var(--primary)" strokeWidth="4" />
         <path
           className="checkmark-check"
           d="M28 52 L44 68 L72 34"
-          stroke="#1D9E75"
+          stroke="var(--primary)"
           strokeWidth="5"
           fill="none"
           strokeLinecap="round"
@@ -72,6 +73,7 @@ function AnimatedCheckmark() {
 
 function ConfirmationContent() {
   const params = useSearchParams()
+  const { settings } = useBranding()
   const reference = params?.get('ref') ?? ''
   const [status, setStatus] = useState<RegistrationStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -119,7 +121,7 @@ function ConfirmationContent() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center" aria-busy="true">
-        <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         <span className="sr-only">Loading registration confirmation</span>
       </main>
     )
@@ -131,7 +133,7 @@ function ConfirmationContent() {
         <div className="card max-w-md p-8 text-center">
           <h1 className="text-xl font-semibold text-slate-900">Confirmation unavailable</h1>
           <p className="text-sm text-slate-600 mt-2">{error}</p>
-          <Link href="/register" className="inline-flex mt-5 h-11 items-center px-4 rounded-lg bg-[#1D9E75] text-white font-medium">
+          <Link href="/register" className="inline-flex mt-5 h-11 items-center px-4 rounded-lg bg-[var(--primary)] text-white font-medium">
             Return to registration
           </Link>
         </div>
@@ -146,10 +148,10 @@ function ConfirmationContent() {
   ]
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#F0FDF9] to-white">
+    <main className="min-h-screen bg-gradient-to-b from-[var(--primary-light)] to-white">
       <Confetti enabled={showConfetti} />
       <div className="max-w-lg mx-auto px-4 py-8">
-        <p className="text-center text-sm font-semibold text-[#1D9E75] mb-6">ClinicFlow Medical Center</p>
+        <p className="text-center text-sm font-semibold text-[var(--primary)] mb-6">{settings.clinic_name}</p>
 
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center mb-4" aria-live="polite">
           <AnimatedCheckmark />
@@ -186,8 +188,8 @@ function ConfirmationContent() {
           <div className="space-y-4">
             {instructions.map(({ icon: Icon, title, description }) => (
               <div key={title} className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#E8F8F2] rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
-                  <Icon className="w-5 h-5 text-[#1D9E75]" />
+                <div className="w-10 h-10 bg-[var(--primary-light)] rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                  <Icon className="w-5 h-5 text-[var(--primary)]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-800">{title}</p>
@@ -207,7 +209,7 @@ function ConfirmationContent() {
         </div>
 
         <div className="text-center">
-          <Link href="/register" className="inline-flex min-h-11 items-center gap-2 text-sm text-[#1D9E75] font-medium hover:underline">
+          <Link href="/register" className="inline-flex min-h-11 items-center gap-2 text-sm text-[var(--primary)] font-medium hover:underline">
             <Home className="w-4 h-4" aria-hidden="true" />
             Register another patient
           </Link>

@@ -137,7 +137,7 @@ export function ConfirmDialog({
             disabled={loading}
             className={cn(
               'px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50',
-              variant === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#1D9E75] hover:bg-[#0F6E56]'
+              variant === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)]'
             )}
           >
             {loading ? 'Processing...' : confirmLabel}

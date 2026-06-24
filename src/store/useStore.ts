@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { defaultBrandTheme } from '../lib/brandTheme'
 import type { Patient, Visit, Invoice, Doctor, ChargePreset, ClinicSettings, Profile } from '../types'
 
 interface AppState {
@@ -48,6 +49,7 @@ const defaultSettings: ClinicSettings = {
   phone: '+91 98765 43210',
   doctor_name: 'Dr. Rakesh Sharma',
   registration_number: 'MH-12345-2024',
+  ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],

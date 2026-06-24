@@ -16,7 +16,9 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useBranding } from '@/context/BrandingContext'
 import { useToast } from '@/components/ui/Toast'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import { useState } from 'react'
 
 const navItems = [
@@ -29,6 +31,7 @@ const navItems = [
 
 export function Sidebar() {
   const { profile, logout } = useAuth()
+  const { settings } = useBranding()
   const router = useRouter()
   const pathname = usePathname()
   const toast = useToast()
@@ -49,13 +52,16 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className={cn('flex items-center gap-3 px-4 py-5 border-b border-white/10', collapsed && 'justify-center px-0')}>
-        <div className="w-8 h-8 bg-[#1D9E75] rounded-lg flex items-center justify-center flex-shrink-0">
-          <Stethoscope className="w-5 h-5 text-white" />
-        </div>
+        <BrandLogo
+          logoUrl={settings.logo_url}
+          label={`${settings.clinic_name} logo`}
+          className="w-8 h-8 bg-[var(--primary)] rounded-lg flex-shrink-0 overflow-hidden"
+          fallback={<Stethoscope className="w-5 h-5 text-white" />}
+        />
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="text-sm font-bold text-white truncate leading-tight">ClinicFlow</p>
-            <p className="text-xs text-slate-400 truncate">Medical Center</p>
+            <p className="text-sm font-bold text-white truncate leading-tight">{settings.clinic_name}</p>
+            <p className="text-xs text-slate-400 truncate">{settings.doctor_name || 'Medical Center'}</p>
           </div>
         )}
       </div>
@@ -73,7 +79,7 @@ export function Sidebar() {
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative',
                   isActive
-                    ? 'bg-[#1D9E75]/20 text-white border-l-2 border-[#1D9E75]'
+                    ? 'bg-white/10 text-white border-l-2 border-[var(--primary)]'
                     : 'text-slate-400 hover:text-white hover:bg-white/5',
                   collapsed && 'justify-center px-0 border-l-0'
                 )}
@@ -96,7 +102,7 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative',
                 pathname === '/settings'
-                  ? 'bg-[#1D9E75]/20 text-white border-l-2 border-[#1D9E75]'
+                  ? 'bg-white/10 text-white border-l-2 border-[var(--primary)]'
                   : 'text-slate-400 hover:text-white hover:bg-white/5',
                 collapsed && 'justify-center px-0 border-l-0'
               )}
@@ -117,8 +123,8 @@ export function Sidebar() {
       <div className={cn('border-t border-white/10 p-3', collapsed && 'p-2')}>
         {!collapsed && (
           <div className="flex items-center gap-3 mb-2 px-1">
-            <div className="w-8 h-8 rounded-full bg-[#1D9E75]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-[#1D9E75]">
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-bold text-[var(--primary)]">
                 {(profile?.full_name ?? 'U').charAt(0)}
               </span>
             </div>

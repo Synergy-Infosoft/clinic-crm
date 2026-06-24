@@ -237,3 +237,25 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
+
+## Multi-clinic branding and doctor settings
+
+Updated: 2026-06-24T16:02:18.6219140+05:30
+
+- Added clinic branding fields to `clinic_settings`: logo URL, primary theme color, hover color, and light tint.
+- Added a reusable brand theme layer that applies clinic colors through CSS variables across the app.
+- Updated login, dashboard chrome, public registration, confirmation, reusable form controls, invoice/queue/patient accents, and loading states to use the active clinic theme.
+- Reorganized the Settings page into clear sections: Branding, Clinic Profile, Doctor List, and Registration Hours.
+- Added Settings controls for logo URL, theme presets, custom theme colors, and live brand preview.
+- Added doctor management in Settings: add doctors, edit names/specializations, activate/deactivate visibility on public registration.
+- Kept public registration doctor choices driven by active doctors only.
+- Added migration `20260624102117_clinic_branding_settings.sql` for the new branding columns and color validation.
+- Applied migration `20260624102117_clinic_branding_settings.sql` to the linked Supabase project.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
+- `supabase db advisors --linked --type security` - completed; only existing `auth_leaked_password_protection` warning remains.

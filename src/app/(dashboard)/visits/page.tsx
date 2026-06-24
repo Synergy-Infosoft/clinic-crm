@@ -140,7 +140,7 @@ export default function VisitsPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-9 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="h-9 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               />
             </div>
             <div className="relative flex-1">
@@ -150,7 +150,7 @@ export default function VisitsPage() {
                 placeholder="Search by patient name or token..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="w-full h-9 pl-9 pr-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               />
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function VisitsPage() {
                 onClick={() => setStatusFilter(tab.value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   statusFilter === tab.value
-                    ? 'bg-[#1D9E75] text-white'
+                    ? 'bg-[var(--primary)] text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -178,7 +178,7 @@ export default function VisitsPage() {
         {/* Visit Cards */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="card py-16 text-center">
@@ -193,8 +193,8 @@ export default function VisitsPage() {
                 onClick={() => openVisitDetails(visit)}
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#1D9E75]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg font-bold text-[#1D9E75]">{visit.token_number}</span>
+                  <div className="w-12 h-12 bg-[var(--primary-light)] rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg font-bold text-[var(--primary)]">{visit.token_number}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -292,7 +292,7 @@ export default function VisitsPage() {
                   await dataService.updateVisit(selectedVisit.id, { doctor_id: e.target.value || null })
                   await loadData()
                 }}
-                className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                className="w-full h-10 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 <option value="">No doctor assigned</option>
                 {doctors.map((d) => (
@@ -308,7 +308,7 @@ export default function VisitsPage() {
                 onChange={(e) => setEditNotes(e.target.value)}
                 rows={3}
                 placeholder="Add clinical notes..."
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] resize-none"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
               />
             </div>
 
@@ -319,7 +319,7 @@ export default function VisitsPage() {
                 onChange={(e) => setEditPrescription(e.target.value)}
                 rows={4}
                 placeholder="Enter prescription details..."
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D9E75] resize-none font-mono"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none font-mono"
               />
             </div>
 

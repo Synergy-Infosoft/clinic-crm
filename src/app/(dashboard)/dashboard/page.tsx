@@ -159,7 +159,7 @@ export default function DashboardPage() {
             <h2 className="text-base font-semibold text-slate-900">Today&apos;s Queue</h2>
             <button
               onClick={() => router.push('/visits')}
-              className="text-xs text-[#1D9E75] hover:underline flex items-center gap-1"
+              className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1"
             >
               View all <ChevronRight className="w-3 h-3" />
             </button>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : visits.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -204,8 +204,8 @@ export default function DashboardPage() {
                   {visits.map((visit) => (
                     <tr key={visit.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-4 py-3">
-                        <div className="w-8 h-8 bg-[#1D9E75]/10 rounded-lg flex items-center justify-center">
-                          <span className="text-xs font-bold text-[#1D9E75]">{visit.token_number}</span>
+                        <div className="w-8 h-8 bg-[var(--primary-light)] rounded-lg flex items-center justify-center">
+                          <span className="text-xs font-bold text-[var(--primary)]">{visit.token_number}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">

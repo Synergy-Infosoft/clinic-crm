@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stethoscope, Shield, Clock, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import * as dataService from '@/lib/dataService'
 import { fallbackClinicSettings, formatTimeLabel, formatTimeRange, formatWorkingScheduleSummary, getAvailableConsultationTimes, getClinicDateTimeParts, getConsultationSlotError, getWorkingSlotsForDate, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
@@ -162,13 +163,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F0FDF9] to-white">
+    <div className="min-h-screen bg-gradient-to-b from-[var(--primary-light)] to-white">
       {/* Header */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#1D9E75] rounded-xl flex items-center justify-center">
-            <Stethoscope className="w-5 h-5 text-white" />
-          </div>
+          <BrandLogo
+            logoUrl={settings.logo_url}
+            label={`${settings.clinic_name} logo`}
+            className="w-10 h-10 bg-[var(--primary)] rounded-xl overflow-hidden"
+            fallback={<Stethoscope className="w-5 h-5 text-white" />}
+          />
           <div className="flex-1">
             <h1 className="text-sm font-bold text-slate-900">{settings.clinic_name}</h1>
             <p className="text-xs text-slate-500">{settings.doctor_name}</p>
@@ -218,7 +222,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 placeholder="Enter your full name"
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                   errors.full_name ? 'border-red-400' : 'border-slate-300'
                 }`}
                 {...register('full_name')}
@@ -239,7 +243,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 placeholder="Enter father's name"
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                   errors.father_name ? 'border-red-400' : 'border-slate-300'
                 }`}
                 {...register('father_name')}
@@ -260,7 +264,7 @@ export default function RegisterPage() {
                   min={1}
                   max={120}
                   placeholder="e.g. 35"
-                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                     errors.age ? 'border-red-400' : 'border-slate-300'
                   }`}
                   {...register('age')}
@@ -277,7 +281,7 @@ export default function RegisterPage() {
                   {(['male', 'female', 'other'] as const).map((g) => (
                     <label
                       key={g}
-                      className="flex-1 flex items-center justify-center border border-slate-300 rounded-xl cursor-pointer text-sm capitalize hover:border-[#1D9E75] transition-colors has-[:checked]:border-[#1D9E75] has-[:checked]:bg-[#E8F8F2] has-[:checked]:text-[#1D9E75] font-medium"
+                      className="flex-1 flex items-center justify-center border border-slate-300 rounded-xl cursor-pointer text-sm capitalize hover:border-[var(--primary)] transition-colors has-[:checked]:border-[var(--primary)] has-[:checked]:bg-[var(--primary-light)] has-[:checked]:text-[var(--primary)] font-medium"
                     >
                       <input type="radio" value={g} className="sr-only" {...register('gender')} />
                       {g === 'male' ? '♂ M' : g === 'female' ? '♀ F' : 'O'}
@@ -299,7 +303,7 @@ export default function RegisterPage() {
                 type="tel"
                 placeholder="10-digit mobile number"
                 maxLength={10}
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                   errors.phone ? 'border-red-400' : 'border-slate-300'
                 }`}
                 {...register('phone')}
@@ -321,7 +325,7 @@ export default function RegisterPage() {
                   <input
                     type="date"
                     min={clinicToday}
-                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent ${
+                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                       errors.consultation_date ? 'border-red-400' : 'border-slate-300'
                     }`}
                     {...register('consultation_date')}
@@ -336,7 +340,7 @@ export default function RegisterPage() {
                   </label>
                   <select
                     disabled={configLoading || availableTimes.length === 0}
-                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 ${
+                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 ${
                       errors.consultation_time || slotError ? 'border-red-400' : 'border-slate-300'
                     }`}
                     {...register('consultation_time')}
@@ -379,7 +383,7 @@ export default function RegisterPage() {
                 Visit Type <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 {...register('visit_type')}
               >
                 <option value="first_visit">First-time visit</option>
@@ -395,7 +399,7 @@ export default function RegisterPage() {
               <textarea
                 rows={3}
                 placeholder="Describe the disease or symptoms briefly... (minimum 5 characters)"
-                className={`w-full px-4 py-3 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent resize-none ${
+                className={`w-full px-4 py-3 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent resize-none ${
                   errors.chief_complaint ? 'border-red-400' : 'border-slate-300'
                 }`}
                 {...register('chief_complaint')}
@@ -413,7 +417,7 @@ export default function RegisterPage() {
                   <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
                 </label>
                 <select
-                  className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+                  className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                   {...register('doctor_id')}
                 >
                   <option value="">Any available doctor</option>
@@ -433,7 +437,7 @@ export default function RegisterPage() {
                 <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
               </label>
               <select
-                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent"
+                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 {...register('referral_source')}
               >
                 <option value="">Select an option</option>
@@ -452,7 +456,7 @@ export default function RegisterPage() {
               <textarea
                 rows={2}
                 placeholder="Your home address"
-                className="w-full px-4 py-3 text-base border border-slate-300 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent resize-none"
+                className="w-full px-4 py-3 text-base border border-slate-300 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent resize-none"
                 {...register('address')}
               />
             </div>
@@ -461,7 +465,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError)}
-              className="w-full h-14 bg-[#1D9E75] hover:bg-[#0F6E56] disabled:opacity-60 text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#1D9E75]/20 active:scale-[0.98]"
+              className="w-full h-14 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
             >
               {isSubmitting ? (
                 <>

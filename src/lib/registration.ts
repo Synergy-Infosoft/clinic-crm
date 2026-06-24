@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { defaultBrandTheme, normalizeBrandTheme } from './brandTheme'
 
 export const referralSources = [
   'google',
@@ -147,6 +148,10 @@ export interface PublicClinicSettings {
   phone: string
   doctor_name: string
   registration_number: string
+  logo_url: string
+  theme_color: string
+  theme_color_hover: string
+  theme_color_light: string
   working_hours_start: string
   working_hours_end: string
   working_days: number[]
@@ -160,11 +165,16 @@ export const fallbackClinicSettings: PublicClinicSettings = {
   phone: '',
   doctor_name: 'Clinic Doctor',
   registration_number: '',
+  ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],
   working_schedule: defaultWorkingSchedule,
   timezone: 'Asia/Kolkata',
+}
+
+export function normalizeClinicBranding(settings: Partial<PublicClinicSettings> | null | undefined) {
+  return normalizeBrandTheme(settings)
 }
 
 function getNormalizedSchedule(settings: PublicClinicSettings) {

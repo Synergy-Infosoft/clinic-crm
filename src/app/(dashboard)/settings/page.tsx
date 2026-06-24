@@ -1,8 +1,22 @@
 "use client";
 
-import { useEffect, useState } from 'react'
-import { Building2, Clock, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  Building2,
+  Check,
+  Clock,
+  Image as ImageIcon,
+  Palette,
+  Plus,
+  Power,
+  Save,
+  ShieldAlert,
+  Stethoscope,
+  Trash2,
+  Users,
+} from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,9 +24,17 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/context/AuthContext'
+import { useBranding } from '@/context/BrandingContext'
 import { defaultWorkingSchedule, splitClinicScheduleExample } from '@/lib/registration'
+import {
+  defaultBrandTheme,
+  deriveHoverColor,
+  deriveLightColor,
+  normalizeBrandTheme,
+  normalizeHexColor,
+} from '@/lib/brandTheme'
 import * as dataService from '@/lib/dataService'
-import type { ClinicDaySchedule, ClinicSettings } from '@/types'
+import type { ClinicDaySchedule, ClinicSettings, Doctor } from '@/types'
 
 const dayOptions = [
   { value: 1, label: 'Monday', short: 'Mon' },
@@ -31,12 +53,31 @@ const timezoneOptions = [
   { value: 'UTC', label: 'UTC' },
 ]
 
+const themePresets = [
+  { name: 'Clinic Green', color: '#1D9E75' },
+  { name: 'Royal Blue', color: '#2563EB' },
+  { name: 'Indigo Care', color: '#4F46E5' },
+  { name: 'Teal Wellness', color: '#0D9488' },
+  { name: 'Rose Clinic', color: '#E11D48' },
+  { name: 'Amber Dental', color: '#D97706' },
+]
+
+const settingsSections = [
+  { id: 'branding', label: 'Branding', description: 'Logo and colors', icon: Palette },
+  { id: 'clinic', label: 'Clinic Profile', description: 'Name, phone, address', icon: Building2 },
+  { id: 'doctors', label: 'Doctor List', description: 'Shown on registration', icon: Users },
+  { id: 'hours', label: 'Registration Hours', description: 'Open days and slots', icon: Clock },
+] as const
+
+type SettingsSectionId = (typeof settingsSections)[number]['id']
+
 const emptySettings: ClinicSettings = {
   clinic_name: '',
   address: '',
   phone: '',
   doctor_name: '',
   registration_number: '',
+  ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',
   working_days: [1, 2, 3, 4, 5, 6],
@@ -51,21 +92,38 @@ function cloneSchedule(schedule: ClinicDaySchedule[]) {
   }))
 }
 
+function getDoctorSubtitle(doctor: Doctor) {
+  return doctor.specialization?.trim() || 'General'
+}
+
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
+  const { refreshBranding } = useBranding()
   const [settings, setSettings] = useState<ClinicSettings>(emptySettings)
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('branding')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [addingDoctor, setAddingDoctor] = useState(false)
+  const [savingDoctorId, setSavingDoctorId] = useState<string | null>(null)
+
+  const brandPreview = useMemo(() => normalizeBrandTheme(settings), [settings])
+  const activeDoctors = doctors.filter((doctor) => doctor.is_active)
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const data = await dataService.getClinicSettings()
-        setSettings(data)
+        const [clinicSettings, doctorList] = await Promise.all([
+          dataService.getClinicSettings(),
+          dataService.getAllDoctors(),
+        ])
+        setSettings(clinicSettings)
+        setDoctors(doctorList)
       } catch (error) {
-        console.error('Failed to load clinic settings:', error)
-        toast.error('Unable to load clinic settings')
+        console.error('Failed to load settings:', error)
+        toast.error('Unable to load settings')
       } finally {
         setLoading(false)
       }
@@ -76,6 +134,26 @@ export default function SettingsPage() {
 
   const updateField = <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const updatePrimaryTheme = (color: string) => {
+    const primary = normalizeHexColor(color, defaultBrandTheme.theme_color)
+    setSettings((current) => ({
+      ...current,
+      theme_color: primary,
+      theme_color_hover: deriveHoverColor(primary),
+      theme_color_light: deriveLightColor(primary),
+    }))
+  }
+
+  const applyThemePreset = (color: string) => {
+    updatePrimaryTheme(color)
+    toast.info('Theme preset applied. Save settings to publish it.')
+  }
+
+  const resetBranding = () => {
+    setSettings((current) => ({ ...current, ...defaultBrandTheme }))
+    toast.info('Default branding restored. Save settings to publish it.')
   }
 
   const updateSchedule = (updater: (schedule: ClinicDaySchedule[]) => ClinicDaySchedule[]) => {
@@ -140,23 +218,34 @@ export default function SettingsPage() {
   const handleSave = async () => {
     if (!settings.clinic_name.trim()) {
       toast.error('Clinic name is required')
+      setActiveSection('clinic')
       return
     }
 
+    if (settings.logo_url.trim() && !/^(https?:\/\/|\/)/i.test(settings.logo_url.trim())) {
+      toast.error('Logo URL must start with https://, http://, or /')
+      setActiveSection('branding')
+      return
+    }
+
+    const normalizedTheme = normalizeBrandTheme(settings)
     const enabledDays = settings.working_schedule.filter((day) => day.enabled)
     if (enabledDays.length === 0) {
       toast.error('Select at least one working day')
+      setActiveSection('hours')
       return
     }
 
     for (const day of enabledDays) {
       if (day.slots.length === 0) {
         toast.error('Every enabled day needs at least one time slot')
+        setActiveSection('hours')
         return
       }
       for (const slot of day.slots) {
         if (!slot.start || !slot.end || slot.start >= slot.end) {
           toast.error('Each time slot must have a valid start and end time')
+          setActiveSection('hours')
           return
         }
       }
@@ -164,14 +253,89 @@ export default function SettingsPage() {
 
     setSaving(true)
     try {
-      const updated = await dataService.updateClinicSettings(settings)
+      const updated = await dataService.updateClinicSettings({ ...settings, ...normalizedTheme })
       setSettings(updated)
+      await refreshBranding()
       toast.success('Clinic settings saved')
     } catch (error) {
       console.error('Failed to save clinic settings:', error)
       toast.error('Unable to save settings. Please check admin permissions.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const refreshDoctors = async () => {
+    const doctorList = await dataService.getAllDoctors()
+    setDoctors(doctorList)
+  }
+
+  const addDoctor = async () => {
+    const name = newDoctor.name.trim()
+    if (name.length < 2) {
+      toast.error('Doctor name is required')
+      return
+    }
+
+    setAddingDoctor(true)
+    try {
+      await dataService.createDoctor({
+        name,
+        specialization: newDoctor.specialization.trim() || null,
+        is_active: true,
+      })
+      setNewDoctor({ name: '', specialization: '' })
+      await refreshDoctors()
+      toast.success('Doctor added')
+    } catch (error) {
+      console.error('Failed to add doctor:', error)
+      toast.error('Unable to add doctor')
+    } finally {
+      setAddingDoctor(false)
+    }
+  }
+
+  const updateDoctorField = <K extends keyof Doctor>(id: string, key: K, value: Doctor[K]) => {
+    setDoctors((current) => current.map((doctor) => (
+      doctor.id === id ? { ...doctor, [key]: value } : doctor
+    )))
+  }
+
+  const saveDoctor = async (doctor: Doctor) => {
+    const name = doctor.name.trim()
+    if (name.length < 2) {
+      toast.error('Doctor name is required')
+      return
+    }
+
+    setSavingDoctorId(doctor.id)
+    try {
+      await dataService.updateDoctor(doctor.id, {
+        name,
+        specialization: doctor.specialization?.trim() || null,
+        is_active: doctor.is_active,
+      })
+      await refreshDoctors()
+      toast.success('Doctor updated')
+    } catch (error) {
+      console.error('Failed to update doctor:', error)
+      toast.error('Unable to update doctor')
+    } finally {
+      setSavingDoctorId(null)
+    }
+  }
+
+  const toggleDoctorActive = async (doctor: Doctor) => {
+    setSavingDoctorId(doctor.id)
+    try {
+      await dataService.updateDoctor(doctor.id, { is_active: !doctor.is_active })
+      await refreshDoctors()
+      toast.success(!doctor.is_active ? 'Doctor activated' : 'Doctor hidden from registration')
+    } catch (error) {
+      console.error('Failed to update doctor status:', error)
+      toast.error('Unable to update doctor status')
+    } finally {
+      setSavingDoctorId(null)
     }
   }
 
@@ -193,10 +357,10 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto">
         <PageHeader
           title="Settings"
-          description="Manage clinic details, split registration hours, and contact information"
+          description="Configure tenant branding, clinic profile, doctors, and public registration hours."
           actions={
             <Button onClick={handleSave} loading={saving} disabled={loading || authLoading} size="sm">
               <Save className="w-4 h-4" />
@@ -207,136 +371,366 @@ export default function SettingsPage() {
 
         {loading || authLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <section className="card p-5 lg:col-span-2 space-y-5 h-fit">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Building2 className="w-5 h-5 text-[#1D9E75]" />
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900">Clinic Information</h2>
-                  <p className="text-xs text-slate-500">Shown on QR registration and patient documents.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+            <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+              <div className="card p-3">
+                <div className="space-y-1">
+                  {settingsSections.map(({ id, label, description, icon: Icon }) => {
+                    const active = activeSection === id
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setActiveSection(id)}
+                        className={`w-full min-h-14 rounded-xl px-3 py-2 text-left transition-colors flex items-center gap-3 ${
+                          active
+                            ? 'bg-[var(--primary-light)] text-slate-950 ring-1 ring-[var(--primary)]'
+                            : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`h-9 w-9 rounded-lg flex items-center justify-center ${active ? 'bg-white text-[var(--primary)]' : 'bg-slate-100 text-slate-500'}`}>
+                          <Icon className="w-4 h-4" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold">{label}</span>
+                          <span className="block text-xs text-slate-500">{description}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-                <Input
-                  label="Clinic Name"
-                  required
-                  value={settings.clinic_name}
-                  onChange={(event) => updateField('clinic_name', event.target.value)}
-                />
-                <Input
-                  label="Primary Doctor Name"
-                  value={settings.doctor_name}
-                  onChange={(event) => updateField('doctor_name', event.target.value)}
-                />
-                <Input
-                  label="Phone Number"
-                  type="tel"
-                  value={settings.phone}
-                  onChange={(event) => updateField('phone', event.target.value)}
-                />
-                <Input
-                  label="Registration Number"
-                  value={settings.registration_number}
-                  onChange={(event) => updateField('registration_number', event.target.value)}
-                />
-              </div>
-
-              <Textarea
-                label="Clinic Address"
-                rows={3}
-                value={settings.address}
-                onChange={(event) => updateField('address', event.target.value)}
-              />
-            </section>
-
-            <section className="card p-5 lg:col-span-3 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-[#1D9E75]" />
-                  <div>
-                    <h2 className="text-base font-semibold text-slate-900">Registration Hours</h2>
-                    <p className="text-xs text-slate-500">Add morning/evening sessions per day. Public QR registration opens only inside these slots.</p>
+              <div className="card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Brand preview</p>
+                <div
+                  className="rounded-2xl p-4 text-white"
+                  style={{ background: `linear-gradient(135deg, ${brandPreview.theme_color}, ${brandPreview.theme_color_hover})` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <BrandLogo
+                      logoUrl={brandPreview.logo_url}
+                      label={`${settings.clinic_name} logo preview`}
+                      className="h-12 w-12 rounded-xl bg-white/20 overflow-hidden"
+                      fallback={<Stethoscope className="h-6 w-6" />}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate">{settings.clinic_name || 'Clinic name'}</p>
+                      <p className="text-xs text-white/80 truncate">{settings.doctor_name || 'Doctor / clinic subtitle'}</p>
+                    </div>
                   </div>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={applySplitSchedule}>
-                  Apply split schedule
-                </Button>
               </div>
+            </aside>
 
-              <Select
-                label="Timezone"
-                required
-                options={timezoneOptions}
-                value={settings.timezone}
-                onChange={(event) => updateField('timezone', event.target.value)}
-              />
+            <div className="space-y-6">
+              {activeSection === 'branding' && (
+                <section className="card p-5 space-y-5">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                    <Palette className="w-5 h-5 text-[var(--primary)]" />
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900">Branding</h2>
+                      <p className="text-xs text-slate-500">Customize how this clinic appears on public registration and staff screens.</p>
+                    </div>
+                  </div>
 
-              <div className="space-y-3">
-                {dayOptions.map((day) => {
-                  const schedule = settings.working_schedule.find((entry) => entry.day === day.value)
-                  const enabled = Boolean(schedule?.enabled)
-                  return (
-                    <div key={day.value} className="rounded-xl border border-slate-200 bg-white p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() => toggleDay(day.value)}
-                          aria-pressed={enabled}
-                          className={`min-w-24 h-10 rounded-lg text-sm font-semibold border transition-colors ${
-                            enabled
-                              ? 'bg-[#1D9E75] text-white border-[#1D9E75]'
-                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-[#1D9E75]'
-                          }`}
-                        >
-                          {day.short}
-                        </button>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-800">{day.label}</p>
-                          <p className="text-xs text-slate-500">{enabled ? 'Open for registration' : 'Closed'}</p>
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => addSlot(day.value)} disabled={!enabled || (schedule?.slots.length ?? 0) >= 3}>
-                          <Plus className="w-4 h-4" />
-                          Slot
-                        </Button>
-                      </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
+                    <div className="space-y-5">
+                      <Input
+                        label="Logo image URL"
+                        placeholder="https://example.com/clinic-logo.png"
+                        helperText="Use a public image URL or a relative path such as /logo.png. Square logos look best."
+                        value={settings.logo_url}
+                        onChange={(event) => updateField('logo_url', event.target.value)}
+                      />
 
-                      {enabled && (
-                        <div className="mt-3 space-y-2 pl-0 sm:pl-28">
-                          {schedule?.slots.map((slot, index) => (
-                            <div key={`${day.value}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
-                              <Input
-                                label={index === 0 ? 'Start' : undefined}
-                                type="time"
-                                value={slot.start}
-                                onChange={(event) => updateSlot(day.value, index, 'start', event.target.value)}
-                              />
-                              <Input
-                                label={index === 0 ? 'End' : undefined}
-                                type="time"
-                                value={slot.end}
-                                onChange={(event) => updateSlot(day.value, index, 'end', event.target.value)}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeSlot(day.value, index)}
-                                aria-label={`Remove ${day.label} slot ${index + 1}`}
-                                className="h-11 w-11 rounded-lg border border-red-100 text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                      <div className="rounded-xl border border-slate-200 p-4">
+                        <p className="text-sm font-semibold text-slate-900 mb-3">Theme presets</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {themePresets.map((preset) => (
+                            <button
+                              key={preset.color}
+                              type="button"
+                              onClick={() => applyThemePreset(preset.color)}
+                              className="min-h-12 rounded-xl border border-slate-200 bg-white px-3 text-left hover:border-[var(--primary)] transition-colors"
+                            >
+                              <span className="flex items-center gap-2">
+                                <span className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: preset.color }} />
+                                <span className="text-sm font-medium text-slate-700">{preset.name}</span>
+                              </span>
+                            </button>
                           ))}
                         </div>
-                      )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Input
+                          label="Primary color"
+                          type="color"
+                          value={settings.theme_color}
+                          onChange={(event) => updatePrimaryTheme(event.target.value)}
+                        />
+                        <Input
+                          label="Hover color"
+                          type="color"
+                          value={settings.theme_color_hover}
+                          onChange={(event) => updateField('theme_color_hover', event.target.value)}
+                        />
+                        <Input
+                          label="Light tint"
+                          type="color"
+                          value={settings.theme_color_light}
+                          onChange={(event) => updateField('theme_color_light', event.target.value)}
+                        />
+                      </div>
+
+                      <Button type="button" variant="outline" onClick={resetBranding}>
+                        Restore default branding
+                      </Button>
                     </div>
-                  )
-                })}
-              </div>
-            </section>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-semibold text-slate-900 mb-3">Logo preview</p>
+                      <div className="aspect-square rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
+                        {brandPreview.logo_url ? (
+                          <BrandLogo
+                            logoUrl={brandPreview.logo_url}
+                            label="Clinic logo preview"
+                            className="h-full w-full"
+                            fallback={<ImageIcon className="h-10 w-10 text-slate-300" />}
+                          />
+                        ) : (
+                          <div className="text-center px-4">
+                            <ImageIcon className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+                            <p className="text-xs text-slate-500">No logo selected</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activeSection === 'clinic' && (
+                <section className="card p-5 space-y-5">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                    <Building2 className="w-5 h-5 text-[var(--primary)]" />
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900">Clinic Profile</h2>
+                      <p className="text-xs text-slate-500">Shown on QR registration, confirmation, and staff navigation.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Clinic Name"
+                      required
+                      value={settings.clinic_name}
+                      onChange={(event) => updateField('clinic_name', event.target.value)}
+                    />
+                    <Input
+                      label="Primary Doctor / Subtitle"
+                      value={settings.doctor_name}
+                      onChange={(event) => updateField('doctor_name', event.target.value)}
+                    />
+                    <Input
+                      label="Phone Number"
+                      type="tel"
+                      value={settings.phone}
+                      onChange={(event) => updateField('phone', event.target.value)}
+                    />
+                    <Input
+                      label="Registration Number"
+                      value={settings.registration_number}
+                      onChange={(event) => updateField('registration_number', event.target.value)}
+                    />
+                  </div>
+
+                  <Textarea
+                    label="Clinic Address"
+                    rows={3}
+                    value={settings.address}
+                    onChange={(event) => updateField('address', event.target.value)}
+                  />
+                </section>
+              )}
+
+              {activeSection === 'doctors' && (
+                <section className="card p-5 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-[var(--primary)]" />
+                      <div>
+                        <h2 className="text-base font-semibold text-slate-900">Doctor List</h2>
+                        <p className="text-xs text-slate-500">Active doctors appear in the public registration doctor preference dropdown.</p>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {activeDoctors.length} active
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900 mb-3">Add a doctor</p>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                      <Input
+                        label="Doctor name"
+                        placeholder="Dr. Asha Sharma"
+                        value={newDoctor.name}
+                        onChange={(event) => setNewDoctor((current) => ({ ...current, name: event.target.value }))}
+                      />
+                      <Input
+                        label="Specialization"
+                        placeholder="Orthopedic, General Physician..."
+                        value={newDoctor.specialization}
+                        onChange={(event) => setNewDoctor((current) => ({ ...current, specialization: event.target.value }))}
+                      />
+                      <Button type="button" onClick={addDoctor} loading={addingDoctor} className="min-w-28">
+                        <Plus className="w-4 h-4" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {doctors.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+                        <Users className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                        <p className="text-sm font-semibold text-slate-800">No doctors added yet</p>
+                        <p className="text-xs text-slate-500 mt-1">Add doctors above to show them on the registration form.</p>
+                      </div>
+                    ) : doctors.map((doctor) => (
+                      <div key={doctor.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                          <Input
+                            label="Doctor name"
+                            value={doctor.name}
+                            onChange={(event) => updateDoctorField(doctor.id, 'name', event.target.value)}
+                          />
+                          <Input
+                            label="Specialization"
+                            value={doctor.specialization ?? ''}
+                            onChange={(event) => updateDoctorField(doctor.id, 'specialization', event.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => saveDoctor(doctor)} loading={savingDoctorId === doctor.id}>
+                              <Save className="w-4 h-4" />
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={doctor.is_active ? 'outline' : 'success'}
+                              onClick={() => toggleDoctorActive(doctor)}
+                              loading={savingDoctorId === doctor.id}
+                              title={doctor.is_active ? 'Hide from registration' : 'Show on registration'}
+                            >
+                              {doctor.is_active ? <Power className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                              {doctor.is_active ? 'Hide' : 'Activate'}
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500">
+                          Registration form status:{' '}
+                          <span className={doctor.is_active ? 'text-emerald-700 font-semibold' : 'text-slate-500 font-semibold'}>
+                            {doctor.is_active ? `Visible as ${doctor.name} - ${getDoctorSubtitle(doctor)}` : 'Hidden from patients'}
+                          </span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {activeSection === 'hours' && (
+                <section className="card p-5 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-[var(--primary)]" />
+                      <div>
+                        <h2 className="text-base font-semibold text-slate-900">Registration Hours</h2>
+                        <p className="text-xs text-slate-500">Add morning/evening sessions per day. Public QR registration opens only inside these slots.</p>
+                      </div>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={applySplitSchedule}>
+                      Apply split schedule
+                    </Button>
+                  </div>
+
+                  <Select
+                    label="Timezone"
+                    required
+                    options={timezoneOptions}
+                    value={settings.timezone}
+                    onChange={(event) => updateField('timezone', event.target.value)}
+                  />
+
+                  <div className="space-y-3">
+                    {dayOptions.map((day) => {
+                      const schedule = settings.working_schedule.find((entry) => entry.day === day.value)
+                      const enabled = Boolean(schedule?.enabled)
+                      return (
+                        <div key={day.value} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleDay(day.value)}
+                              aria-pressed={enabled}
+                              className={`min-w-24 h-10 rounded-lg text-sm font-semibold border transition-colors ${
+                                enabled
+                                  ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-[var(--primary)]'
+                              }`}
+                            >
+                              {day.short}
+                            </button>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-slate-800">{day.label}</p>
+                              <p className="text-xs text-slate-500">{enabled ? 'Open for registration' : 'Closed'}</p>
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => addSlot(day.value)} disabled={!enabled || (schedule?.slots.length ?? 0) >= 3}>
+                              <Plus className="w-4 h-4" />
+                              Slot
+                            </Button>
+                          </div>
+
+                          {enabled && (
+                            <div className="mt-3 space-y-2 pl-0 sm:pl-28">
+                              {schedule?.slots.map((slot, index) => (
+                                <div key={`${day.value}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                                  <Input
+                                    label={index === 0 ? 'Start' : undefined}
+                                    type="time"
+                                    value={slot.start}
+                                    onChange={(event) => updateSlot(day.value, index, 'start', event.target.value)}
+                                  />
+                                  <Input
+                                    label={index === 0 ? 'End' : undefined}
+                                    type="time"
+                                    value={slot.end}
+                                    onChange={(event) => updateSlot(day.value, index, 'end', event.target.value)}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSlot(day.value, index)}
+                                    aria-label={`Remove ${day.label} slot ${index + 1}`}
+                                    className="h-11 w-11 rounded-lg border border-red-100 text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
         )}
       </div>

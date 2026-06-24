@@ -7,9 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stethoscope, Eye, EyeOff, Shield } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useBranding } from '@/context/BrandingContext'
 import { useToast } from '@/components/ui/Toast'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -21,6 +23,7 @@ type FormData = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
+  const { settings } = useBranding()
   const toast = useToast()
   const [showPassword, setShowPassword] = useState(false)
 
@@ -50,10 +53,13 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#1D9E75] rounded-2xl mb-4 shadow-xl shadow-[#1D9E75]/20">
-            <Stethoscope className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">ClinicFlow</h1>
+          <BrandLogo
+            logoUrl={settings.logo_url}
+            label={`${settings.clinic_name} logo`}
+            className="inline-flex w-16 h-16 bg-[var(--primary)] rounded-2xl mb-4 shadow-xl overflow-hidden"
+            fallback={<Stethoscope className="w-8 h-8 text-white" />}
+          />
+          <h1 className="text-2xl font-bold text-white">{settings.clinic_name}</h1>
           <p className="text-slate-400 text-sm mt-1">Appointment & Reception Management</p>
         </div>
 
@@ -80,7 +86,7 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="w-full h-11 px-3 pr-10 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent hover:border-slate-400"
+                  className="w-full h-11 px-3 pr-10 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent hover:border-slate-400"
                   autoComplete="current-password"
                   {...register('password')}
                 />
@@ -122,7 +128,7 @@ export default function LoginPage() {
                       toast.error('Login failed')
                     }
                   }}
-                  className="text-xs py-2 px-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[#1D9E75] transition-colors text-center"
+                  className="text-xs py-2 px-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[var(--primary)] transition-colors text-center"
                 >
                   <span className="block font-medium text-slate-700">{acc.label}</span>
                   <span className="text-slate-400 text-xs">Click to login</span>

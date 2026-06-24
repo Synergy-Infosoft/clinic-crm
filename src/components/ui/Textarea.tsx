@@ -23,7 +23,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={textareaId}
           className={cn(
             'w-full px-3 py-2.5 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 resize-none',
-            'transition-colors focus:outline-none focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent',
+            'transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent',
             error ? 'border-red-400 focus:ring-red-400' : 'border-slate-300 hover:border-slate-400',
             className
           )}

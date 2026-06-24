@@ -4,14 +4,13 @@ import { format } from 'date-fns'
 import { Wifi, WifiOff } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useBranding } from '@/context/BrandingContext'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
-const CLINIC_NAME = 'ClinicFlow Medical Center'
-const DOCTOR_NAME = 'Dr. Clinic'
-
 export function Header() {
   const { profile } = useAuth()
+  const { settings } = useBranding()
   const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
@@ -43,8 +42,8 @@ export function Header() {
       <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center gap-4 print:hidden">
         {/* Clinic name - mobile */}
         <div className="flex-1 md:flex-none">
-          <h1 className="text-sm font-bold text-slate-900 md:hidden">{CLINIC_NAME}</h1>
-          <p className="text-xs text-slate-500 md:hidden">{DOCTOR_NAME}</p>
+          <h1 className="text-sm font-bold text-slate-900 md:hidden">{settings.clinic_name}</h1>
+          <p className="text-xs text-slate-500 md:hidden">{settings.doctor_name}</p>
         </div>
 
         {/* Today's date - center */}

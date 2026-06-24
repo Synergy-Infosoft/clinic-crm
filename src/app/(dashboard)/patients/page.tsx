@@ -119,13 +119,13 @@ export default function PatientsPage() {
             placeholder="Search by name, father's name, or phone number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+            className="w-full h-10 pl-9 pr-4 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           />
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -138,8 +138,8 @@ export default function PatientsPage() {
                   className="card p-4 cursor-pointer hover-card"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-[#1D9E75]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-[#1D9E75]" />
+                    <div className="w-10 h-10 bg-[var(--primary-light)] rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-[var(--primary)]" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-semibold text-slate-900">{p.full_name}</h3>
@@ -187,8 +187,8 @@ export default function PatientsPage() {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-[#1D9E75]/10 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-bold text-[#1D9E75]">{p.full_name.charAt(0)}</span>
+                              <div className="w-8 h-8 bg-[var(--primary-light)] rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-[var(--primary)]">{p.full_name.charAt(0)}</span>
                               </div>
                               <span className="text-sm font-semibold text-slate-900">{p.full_name}</span>
                             </div>
@@ -205,7 +205,7 @@ export default function PatientsPage() {
                           <td className="px-4 py-3">
                             <button
                               onClick={(e) => { e.stopPropagation(); router.push(`/patients/${p.id}`) }}
-                              className="text-xs text-[#1D9E75] hover:underline font-medium"
+                              className="text-xs text-[var(--primary)] hover:underline font-medium"
                             >
                               View →
                             </button>

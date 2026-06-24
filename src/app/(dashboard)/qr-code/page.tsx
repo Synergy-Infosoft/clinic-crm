@@ -81,8 +81,8 @@ export default function QRCodePage() {
           {/* QR Card */}
           <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 flex flex-col items-center">
             {/* Header */}
-            <div className="w-14 h-14 bg-[#1D9E75]/10 rounded-2xl flex items-center justify-center mb-4">
-              <Smartphone className="w-7 h-7 text-[#1D9E75]" aria-hidden="true" />
+            <div className="w-14 h-14 bg-[var(--primary-light)] rounded-2xl flex items-center justify-center mb-4">
+              <Smartphone className="w-7 h-7 text-[var(--primary)]" aria-hidden="true" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-1">Scan to Register</h2>
             <p className="text-slate-500 text-sm text-center mb-8 max-w-xs">
@@ -93,19 +93,19 @@ export default function QRCodePage() {
             {/* QR Code */}
             <div
               id="qr-svg"
-              className="bg-white p-5 rounded-2xl border-4 border-[#1D9E75]/20 shadow-sm"
+              className="bg-white p-5 rounded-2xl border-4 border-[var(--primary-light)] shadow-sm"
             >
               {registrationUrl ? (
                 <QRCode value={registrationUrl} size={220} fgColor="#0f172a" bgColor="#ffffff" />
               ) : (
                 <div className="w-[220px] h-[220px] flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
 
             {/* Clinic label under QR */}
-            <div className="mt-4 px-4 py-2 bg-[#1D9E75] rounded-xl">
+            <div className="mt-4 px-4 py-2 bg-[var(--primary)] rounded-xl">
               <p className="text-white text-xs font-bold tracking-wide text-center">
                 ClinicFlow Medical Center
               </p>
@@ -123,7 +123,7 @@ export default function QRCodePage() {
                   href={registrationUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 text-sm font-medium text-[#1D9E75] hover:underline break-all"
+                  className="flex-1 text-sm font-medium text-[var(--primary)] hover:underline break-all"
                 >
                   {registrationUrl}
                 </a>
@@ -143,7 +143,7 @@ export default function QRCodePage() {
             </button>
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-2 h-11 bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+              className="flex items-center justify-center gap-2 h-11 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
               Download

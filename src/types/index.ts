@@ -106,6 +106,10 @@ export interface ClinicSettings {
   phone: string
   doctor_name: string
   registration_number: string
+  logo_url: string
+  theme_color: string
+  theme_color_hover: string
+  theme_color_light: string
   working_hours_start: string
   working_hours_end: string
   working_days: number[]

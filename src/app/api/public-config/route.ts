@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fallbackClinicSettings, isClinicOpenNow, normalizeWorkingSchedule } from '@/lib/registration'
+import { normalizeBrandTheme } from '@/lib/brandTheme'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,12 @@ export async function GET() {
       ...(settings ?? {}),
       working_hours_start: String(settings?.working_hours_start ?? fallbackClinicSettings.working_hours_start).slice(0, 5),
       working_hours_end: String(settings?.working_hours_end ?? fallbackClinicSettings.working_hours_end).slice(0, 5),
+      ...normalizeBrandTheme({
+        logo_url: settings?.logo_url ?? fallbackClinicSettings.logo_url,
+        theme_color: settings?.theme_color ?? fallbackClinicSettings.theme_color,
+        theme_color_hover: settings?.theme_color_hover ?? fallbackClinicSettings.theme_color_hover,
+        theme_color_light: settings?.theme_color_light ?? fallbackClinicSettings.theme_color_light,
+      }),
       working_schedule: normalizeWorkingSchedule(
         settings?.working_schedule,
         settings?.working_days ?? fallbackClinicSettings.working_days,

@@ -6,6 +6,7 @@
 import { createClient } from './supabase/client'
 import { format } from 'date-fns'
 import { normalizeWorkingSchedule } from './registration'
+import { defaultBrandTheme, normalizeBrandTheme } from './brandTheme'
 import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats, ClinicSettings } from '../types'
 import type { Database } from '../types/database'
 
@@ -272,6 +273,17 @@ export async function getDoctors(): Promise<Doctor[]> {
   return data as Doctor[]
 }
 
+export async function getAllDoctors(): Promise<Doctor[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('doctors')
+    .select('id, name, specialization, is_active')
+    .order('is_active', { ascending: false })
+    .order('name')
+  if (error) throw error
+  return data as Doctor[]
+}
+
 export async function createDoctor(data: Omit<Doctor, 'id'>): Promise<Doctor> {
   const supabase = createClient()
   const { data: doctor, error } = await supabase.from('doctors').insert(data).select().single()
@@ -356,6 +368,12 @@ export async function getClinicSettings(): Promise<ClinicSettings> {
     phone: data?.phone ?? '',
     doctor_name: data?.doctor_name ?? 'Clinic Doctor',
     registration_number: data?.registration_number ?? '',
+    ...normalizeBrandTheme({
+      logo_url: data?.logo_url ?? defaultBrandTheme.logo_url,
+      theme_color: data?.theme_color ?? defaultBrandTheme.theme_color,
+      theme_color_hover: data?.theme_color_hover ?? defaultBrandTheme.theme_color_hover,
+      theme_color_light: data?.theme_color_light ?? defaultBrandTheme.theme_color_light,
+    }),
     working_hours_start: String(data?.working_hours_start ?? '09:00').slice(0, 5),
     working_hours_end: String(data?.working_hours_end ?? '18:00').slice(0, 5),
     working_days: data?.working_days ?? [1, 2, 3, 4, 5, 6],
@@ -371,6 +389,7 @@ export async function getClinicSettings(): Promise<ClinicSettings> {
 
 export async function updateClinicSettings(settings: ClinicSettings): Promise<ClinicSettings> {
   const supabase = createClient()
+  const normalizedBrand = normalizeBrandTheme(settings)
   const { data, error } = await supabase
     .from('clinic_settings')
     .upsert({
@@ -380,6 +399,10 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
       phone: settings.phone.trim(),
       doctor_name: settings.doctor_name.trim(),
       registration_number: settings.registration_number.trim(),
+      logo_url: normalizedBrand.logo_url,
+      theme_color: normalizedBrand.theme_color,
+      theme_color_hover: normalizedBrand.theme_color_hover,
+      theme_color_light: normalizedBrand.theme_color_light,
       working_hours_start: settings.working_hours_start,
       working_hours_end: settings.working_hours_end,
       working_days: settings.working_schedule.filter((day) => day.enabled).map((day) => day.day),
@@ -397,6 +420,12 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
     phone: data.phone,
     doctor_name: data.doctor_name,
     registration_number: data.registration_number,
+    ...normalizeBrandTheme({
+      logo_url: data.logo_url,
+      theme_color: data.theme_color,
+      theme_color_hover: data.theme_color_hover,
+      theme_color_light: data.theme_color_light,
+    }),
     working_hours_start: String(data.working_hours_start).slice(0, 5),
     working_hours_end: String(data.working_hours_end).slice(0, 5),
     working_days: data.working_days,

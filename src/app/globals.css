@@ -139,7 +139,7 @@ button:active:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 20px 60px rgba(29, 158, 117, 0.35);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--primary) 35%, transparent);
   margin: 0 auto;
 }
 

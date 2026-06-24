@@ -121,7 +121,7 @@ export function InvoiceForm({ invoice, chargePresets, onUpdate }: InvoiceFormPro
                       min={1}
                       value={item.quantity}
                       onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                      className="w-14 text-center text-sm border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#1D9E75]"
+                      className="w-14 text-center text-sm border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                     />
                   </td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">{formatCurrency(item.amount)}</td>
@@ -172,7 +172,7 @@ export function InvoiceForm({ invoice, chargePresets, onUpdate }: InvoiceFormPro
                       className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 text-left transition-colors"
                     >
                       <span className="text-sm text-slate-700">{preset.name}</span>
-                      <span className="text-sm font-semibold text-[#1D9E75]">{formatCurrency(preset.amount)}</span>
+                      <span className="text-sm font-semibold text-[var(--primary)]">{formatCurrency(preset.amount)}</span>
                     </button>
                   ))}
                 </div>
@@ -187,18 +187,18 @@ export function InvoiceForm({ invoice, chargePresets, onUpdate }: InvoiceFormPro
                   value={customItemName}
                   onChange={(e) => setCustomItemName(e.target.value)}
                   placeholder="Item name"
-                  className="flex-1 text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#1D9E75]"
+                  className="flex-1 text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                 />
                 <input
                   type="number"
                   value={customItemAmount}
                   onChange={(e) => setCustomItemAmount(e.target.value)}
                   placeholder="₹"
-                  className="w-20 text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#1D9E75]"
+                  className="w-20 text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                 />
                 <button
                   onClick={addCustomItem}
-                  className="px-3 py-1.5 bg-[#1D9E75] text-white text-sm rounded-lg hover:bg-[#0F6E56] transition-colors"
+                  className="px-3 py-1.5 bg-[var(--primary)] text-white text-sm rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
                 >
                   Add
                 </button>
@@ -221,12 +221,12 @@ export function InvoiceForm({ invoice, chargePresets, onUpdate }: InvoiceFormPro
             min={0}
             value={invoice.discount || 0}
             onChange={(e) => updateDiscount(parseFloat(e.target.value) || 0)}
-            className="w-28 text-right text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#1D9E75]"
+            className="w-28 text-right text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
           />
         </div>
         <div className="border-t border-slate-200 pt-2 flex justify-between">
           <span className="text-base font-bold text-slate-900">Total</span>
-          <span className="text-base font-bold text-[#1D9E75]">{formatCurrency(invoice.total)}</span>
+          <span className="text-base font-bold text-[var(--primary)]">{formatCurrency(invoice.total)}</span>
         </div>
       </div>
     </div>
