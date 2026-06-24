@@ -10,9 +10,59 @@ function errorResponse(message: string, status: number, details?: unknown) {
   return NextResponse.json({ error: message, details }, { status, headers: { 'Cache-Control': 'no-store' } })
 }
 
-export async function POST(request: NextRequest) {
+function firstHeaderValue(value: string | null) {
+  return value?.split(',')[0]?.trim() || null
+}
+
+function normalizeOrigin(value: string | null | undefined) {
+  if (!value) return null
+  try {
+    return new URL(value).origin
+  } catch {
+    return null
+  }
+}
+
+function addOrigin(origins: Set<string>, value: string | null | undefined) {
+  const origin = normalizeOrigin(value)
+  if (origin) origins.add(origin)
+}
+
+function getAllowedOrigins(request: NextRequest) {
+  const origins = new Set<string>()
+  const forwardedHost = firstHeaderValue(request.headers.get('x-forwarded-host'))
+  const forwardedProto = firstHeaderValue(request.headers.get('x-forwarded-proto'))
+  const host = firstHeaderValue(request.headers.get('host'))
+  const requestProtocol = request.nextUrl.protocol.replace(':', '') || 'https'
+  const effectiveProtocol = forwardedProto || requestProtocol
+
+  addOrigin(origins, request.nextUrl.origin)
+  addOrigin(origins, process.env.NEXT_PUBLIC_APP_URL)
+
+  const extraOrigins = process.env.APP_ALLOWED_ORIGINS?.split(',') ?? []
+  for (const origin of extraOrigins) addOrigin(origins, origin.trim())
+
+  for (const candidateHost of [forwardedHost, host]) {
+    if (!candidateHost) continue
+    addOrigin(origins, `${effectiveProtocol}://${candidateHost}`)
+    if (!forwardedProto && !candidateHost.startsWith('localhost') && !candidateHost.startsWith('127.0.0.1')) {
+      addOrigin(origins, `https://${candidateHost}`)
+    }
+  }
+
+  return origins
+}
+
+function isAllowedRequestOrigin(request: NextRequest) {
   const origin = request.headers.get('origin')
-  if (origin && origin !== request.nextUrl.origin) {
+  if (!origin) return true
+  const normalizedOrigin = normalizeOrigin(origin)
+  if (!normalizedOrigin) return false
+  return getAllowedOrigins(request).has(normalizedOrigin)
+}
+
+export async function POST(request: NextRequest) {
+  if (!isAllowedRequestOrigin(request)) {
     return errorResponse('Invalid request origin', 403)
   }
 

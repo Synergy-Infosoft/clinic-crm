@@ -203,3 +203,18 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 5 tests.
 - `npm run build` - passed.
+
+## Registration origin validation fix
+
+Updated: 2026-06-24T00:00:00.000Z
+
+- Fixed overly strict `/api/register` origin validation that could reject valid form submissions behind HTTPS proxies or custom deployment domains.
+- Registration now accepts the current request origin, forwarded host/protocol origin, configured `NEXT_PUBLIC_APP_URL`, and optional comma-separated `APP_ALLOWED_ORIGINS`.
+- Documented `APP_ALLOWED_ORIGINS` in `.env.example` for deployments with multiple accepted domains.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 5 tests.
+- `npm run build` - passed.
