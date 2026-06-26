@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Stethoscope, Shield, Clock, AlertCircle } from 'lucide-react'
+import { Stethoscope, Shield, Clock, AlertCircle, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { BrandLogo } from '@/components/shared/BrandLogo'
 import * as dataService from '@/lib/dataService'
@@ -57,6 +57,7 @@ export default function RegisterPage() {
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
   const scheduleSummary = formatWorkingScheduleSummary(settings)
+  const websiteUrl = settings.website_url.trim()
 
   useEffect(() => {
     const load = async () => {
@@ -209,6 +210,17 @@ export default function RegisterPage() {
           <p className="text-slate-500 text-sm mt-1">
             Fill in your details to get a token number. Reception staff will call your token when it&apos;s your turn.
           </p>
+          {websiteUrl && (
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--primary)] bg-white px-4 py-2 text-sm font-semibold text-[var(--primary)] shadow-sm transition-colors hover:bg-[var(--primary-light)]"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View hospital website
+            </a>
+          )}
         </div>
 
         {/* Form */}

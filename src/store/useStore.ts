@@ -49,6 +49,7 @@ const defaultSettings: ClinicSettings = {
   phone: '+91 98765 43210',
   doctor_name: 'Dr. Rakesh Sharma',
   registration_number: 'MH-12345-2024',
+  website_url: '',
   ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',

@@ -160,6 +160,7 @@ export interface Database {
         phone: string
         doctor_name: string
         registration_number: string
+        website_url: string
         logo_url: string
         theme_color: string
         theme_color_hover: string

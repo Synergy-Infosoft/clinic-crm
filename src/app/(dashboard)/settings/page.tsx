@@ -85,6 +85,7 @@ const emptySettings: ClinicSettings = {
   phone: '',
   doctor_name: '',
   registration_number: '',
+  website_url: '',
   ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',
@@ -117,6 +118,16 @@ function getDoctorDeleteErrorMessage(error: unknown) {
   }
 
   return 'Unable to delete doctor'
+}
+
+function isValidClinicWebsiteUrl(value: string) {
+  if (!value.trim()) return true
+  try {
+    const url = new URL(value.trim())
+    return url.protocol === 'https:' && Boolean(url.hostname.includes('.'))
+  } catch {
+    return false
+  }
 }
 
 function formatStaffCreatedAt(value: string | null | undefined) {
@@ -295,6 +306,12 @@ export default function SettingsPage() {
     if (settings.logo_url.trim() && !/^(https?:\/\/|\/)/i.test(settings.logo_url.trim())) {
       toast.error('Logo URL must start with https://, http://, or /')
       setActiveSection('branding')
+      return
+    }
+
+    if (!isValidClinicWebsiteUrl(settings.website_url)) {
+      toast.error('Website URL must be a valid https:// address')
+      setActiveSection('clinic')
       return
     }
 
@@ -724,6 +741,16 @@ export default function SettingsPage() {
                       value={settings.registration_number}
                       onChange={(event) => updateField('registration_number', event.target.value)}
                     />
+                    <div className="md:col-span-2">
+                      <Input
+                        label="Hospital Website URL"
+                        type="url"
+                        placeholder="https://yourhospital.com"
+                        helperText="Optional. Shown as a Visit website link on public registration and staff sidebar."
+                        value={settings.website_url}
+                        onChange={(event) => updateField('website_url', event.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <Textarea

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   LogOut,
   Stethoscope,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
@@ -36,6 +37,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const toast = useToast()
   const [collapsed, setCollapsed] = useState(false)
+  const websiteUrl = settings.website_url.trim()
 
   const handleLogout = async () => {
     await logout()
@@ -133,6 +135,21 @@ export function Sidebar() {
               <p className="text-xs text-slate-400 capitalize">{profile?.role}</p>
             </div>
           </div>
+        )}
+        {websiteUrl && (
+          <a
+            href={websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'mb-1 flex items-center gap-2 w-full px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors',
+              collapsed && 'justify-center'
+            )}
+            title="Visit website"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {!collapsed && <span className="text-sm">Visit website</span>}
+          </a>
         )}
         <button
           onClick={handleLogout}

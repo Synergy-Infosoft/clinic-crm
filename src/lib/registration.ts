@@ -148,6 +148,7 @@ export interface PublicClinicSettings {
   phone: string
   doctor_name: string
   registration_number: string
+  website_url: string
   logo_url: string
   theme_color: string
   theme_color_hover: string
@@ -165,6 +166,7 @@ export const fallbackClinicSettings: PublicClinicSettings = {
   phone: '',
   doctor_name: 'Clinic Doctor',
   registration_number: '',
+  website_url: '',
   ...defaultBrandTheme,
   working_hours_start: '09:00',
   working_hours_end: '18:00',

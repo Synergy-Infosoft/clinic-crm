@@ -356,3 +356,23 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
+
+## Hospital website link setting
+
+Updated: 2026-06-26T17:04:44.7582967+05:30
+
+- Added optional `website_url` to clinic settings for linking the clinic/hospital website.
+- Added Settings > Clinic Profile input for the hospital website URL.
+- Added validation so the website URL must be empty or a valid `https://` address.
+- Added a "View hospital website" button on the public patient registration page when a website URL is configured.
+- Added a "Visit website" action in the dashboard sidebar near the staff profile/logout area.
+- Added migration `20260626112721_clinic_website_url.sql` and applied it to the linked Supabase project.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
+- Verified the `website_url` column exists on the linked Supabase project.
+- `supabase db advisors --linked --type security` - completed; only existing `auth_leaked_password_protection` warning remains.

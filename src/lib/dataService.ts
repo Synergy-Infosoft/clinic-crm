@@ -432,6 +432,7 @@ export async function getClinicSettings(): Promise<ClinicSettings> {
     phone: data?.phone ?? '',
     doctor_name: data?.doctor_name ?? 'Clinic Doctor',
     registration_number: data?.registration_number ?? '',
+    website_url: data?.website_url ?? '',
     ...normalizeBrandTheme({
       logo_url: data?.logo_url ?? defaultBrandTheme.logo_url,
       theme_color: data?.theme_color ?? defaultBrandTheme.theme_color,
@@ -463,6 +464,7 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
       phone: settings.phone.trim(),
       doctor_name: settings.doctor_name.trim(),
       registration_number: settings.registration_number.trim(),
+      website_url: settings.website_url.trim(),
       logo_url: normalizedBrand.logo_url,
       theme_color: normalizedBrand.theme_color,
       theme_color_hover: normalizedBrand.theme_color_hover,
@@ -484,6 +486,7 @@ export async function updateClinicSettings(settings: ClinicSettings): Promise<Cl
     phone: data.phone,
     doctor_name: data.doctor_name,
     registration_number: data.registration_number,
+    website_url: data.website_url,
     ...normalizeBrandTheme({
       logo_url: data.logo_url,
       theme_color: data.theme_color,
