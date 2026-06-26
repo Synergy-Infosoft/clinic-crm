@@ -356,6 +356,17 @@ export async function createStaffUser(payload: CreateStaffUserPayload): Promise<
   return result.staff as StaffUser
 }
 
+export async function deleteStaffUser(id: string): Promise<void> {
+  const response = await fetch(`/api/admin/staff-users?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+  const result = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Unable to delete staff user')
+  }
+}
+
 // ─── Charge Presets ───────────────────────────────────────────────────────────
 
 export async function getChargePresets(): Promise<ChargePreset[]> {

@@ -14,6 +14,8 @@ const createStaffSchema = z.object({
   role: z.enum(staffRoles),
 })
 
+const deleteStaffSchema = z.string().uuid()
+
 function jsonResponse(body: unknown, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -77,7 +79,7 @@ async function requireAdmin() {
   const { data: { user }, error: userError } = await userClient.auth.getUser()
 
   if (userError || !user) {
-    return { admin: null, response: jsonResponse({ error: 'Authentication required' }, 401) }
+    return { admin: null, userId: null, response: jsonResponse({ error: 'Authentication required' }, 401) }
   }
 
   const admin = createAdminClient()
@@ -90,10 +92,10 @@ async function requireAdmin() {
   if (profileError) throw profileError
 
   if (profile?.role !== 'admin') {
-    return { admin: null, response: jsonResponse({ error: 'Admin access required' }, 403) }
+    return { admin: null, userId: user.id, response: jsonResponse({ error: 'Admin access required' }, 403) }
   }
 
-  return { admin, response: null }
+  return { admin, userId: user.id, response: null }
 }
 
 export async function GET() {
@@ -204,5 +206,48 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Staff user creation failed', error instanceof Error ? error.message : 'Unknown error')
     return jsonResponse({ error: 'Unable to create staff user' }, 503)
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!isAllowedRequestOrigin(request)) {
+    return jsonResponse({ error: 'Invalid request origin' }, 403)
+  }
+
+  const parsed = deleteStaffSchema.safeParse(request.nextUrl.searchParams.get('id'))
+  if (!parsed.success) {
+    return jsonResponse({ error: 'Invalid staff user id' }, 400)
+  }
+
+  try {
+    const auth = await requireAdmin()
+    if (auth.response) return auth.response
+
+    const admin = auth.admin
+    if (!admin || !auth.userId) return jsonResponse({ error: 'Admin access required' }, 403)
+
+    const targetUserId = parsed.data
+    if (targetUserId === auth.userId) {
+      return jsonResponse({ error: 'You cannot delete the account you are currently using' }, 409)
+    }
+
+    const { data: targetProfile, error: targetProfileError } = await admin
+      .from('profiles')
+      .select('id, role')
+      .eq('id', targetUserId)
+      .maybeSingle()
+
+    if (targetProfileError) throw targetProfileError
+    if (!targetProfile) {
+      return jsonResponse({ error: 'Staff user not found' }, 404)
+    }
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(targetUserId)
+    if (deleteError) throw deleteError
+
+    return jsonResponse({ deleted_id: targetUserId })
+  } catch (error) {
+    console.error('Staff user deletion failed', error instanceof Error ? error.message : 'Unknown error')
+    return jsonResponse({ error: 'Unable to delete staff user' }, 503)
   }
 }

@@ -339,3 +339,20 @@ Validation performed:
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
 - Verified both dummy `profiles` rows exist in the linked Supabase project.
+
+## Staff user delete action
+
+Updated: 2026-06-26T16:35:48.2389288+05:30
+
+- Added a permanent Delete action to Settings > Staff Users.
+- Added an admin-only DELETE handler on `/api/admin/staff-users` that removes the selected Supabase Auth user.
+- Kept the existing safety boundary: the service-role key stays server-only and every delete request re-checks admin role on the server.
+- Prevented admins from deleting the account they are currently using to avoid accidental lockout.
+- Added confirmation copy before deletion because this action cannot be undone.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.

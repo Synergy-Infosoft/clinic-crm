@@ -162,6 +162,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [addingDoctor, setAddingDoctor] = useState(false)
   const [creatingStaffUser, setCreatingStaffUser] = useState(false)
+  const [deletingStaffUserId, setDeletingStaffUserId] = useState<string | null>(null)
   const [savingDoctorId, setSavingDoctorId] = useState<string | null>(null)
 
   const brandPreview = useMemo(() => normalizeBrandTheme(settings), [settings])
@@ -384,6 +385,30 @@ export default function SettingsPage() {
       toast.error(error instanceof Error ? error.message : 'Unable to create staff user')
     } finally {
       setCreatingStaffUser(false)
+    }
+  }
+
+  const deleteStaffUser = async (staff: dataService.StaffUser) => {
+    if (staff.id === profile?.id) {
+      toast.error('You cannot delete the account you are currently using')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${staff.full_name}'s login account?\n\nThis removes their Supabase Auth user and profile. They will no longer be able to sign in. This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeletingStaffUserId(staff.id)
+    try {
+      await dataService.deleteStaffUser(staff.id)
+      await refreshStaffUsers()
+      toast.success('Staff user deleted')
+    } catch (error) {
+      console.error('Failed to delete staff user:', error)
+      toast.error(error instanceof Error ? error.message : 'Unable to delete staff user')
+    } finally {
+      setDeletingStaffUserId(null)
     }
   }
 
@@ -775,25 +800,49 @@ export default function SettingsPage() {
                         <p className="text-sm font-semibold text-slate-800">No staff users found</p>
                         <p className="text-xs text-slate-500 mt-1">Create receptionist and doctor logins above.</p>
                       </div>
-                    ) : staffUsers.map((staff) => (
+                    ) : staffUsers.map((staff) => {
+                      const isCurrentUser = staff.id === profile?.id
+
+                      return (
                       <div key={staff.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-semibold text-slate-900 truncate">{staff.full_name}</p>
                               <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getRoleBadgeClass(staff.role)}`}>
                                 {getRoleLabel(staff.role)}
                               </span>
+                              {isCurrentUser && (
+                                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                                  Current user
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-slate-500 truncate">{staff.email || 'No email found in Auth'}</p>
                           </div>
-                          <div className="text-left sm:text-right">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Created</p>
-                            <p className="text-sm text-slate-600">{formatStaffCreatedAt(staff.created_at)}</p>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:justify-end">
+                            <div className="text-left sm:text-right">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Created</p>
+                              <p className="text-sm text-slate-600">{formatStaffCreatedAt(staff.created_at)}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => deleteStaffUser(staff)}
+                              loading={deletingStaffUserId === staff.id}
+                              disabled={isCurrentUser}
+                              title={isCurrentUser ? 'You cannot delete the account you are currently using' : `Delete ${staff.full_name}`}
+                              aria-label={isCurrentUser ? 'Cannot delete current user' : `Delete ${staff.full_name}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </Button>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </section>
               )}
