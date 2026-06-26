@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { AddVisitDialog } from '@/components/visits/AddVisitDialog'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { useAuth } from '@/context/AuthContext'
 import { formatTime } from '@/lib/utils'
 import * as dataService from '@/lib/dataService'
 import type { Visit, Doctor } from '@/types'
@@ -20,6 +21,8 @@ type StatusFilter = 'all' | Visit['status']
 export default function VisitsPage() {
   const router = useRouter()
   const toast = useToast()
+  const { profile } = useAuth()
+  const canManageBilling = profile?.role === 'admin' || profile?.role === 'receptionist'
   const [visits, setVisits] = useState<Visit[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -32,6 +35,7 @@ export default function VisitsPage() {
   const [editNotes, setEditNotes] = useState('')
   const [editPrescription, setEditPrescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [generatingInvoiceVisitId, setGeneratingInvoiceVisitId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -101,6 +105,19 @@ export default function VisitsPage() {
     setSelectedVisit(visit)
     setEditNotes(visit.notes || '')
     setEditPrescription(visit.prescription || '')
+  }
+
+  const handleInvoiceAction = async (visit: Visit) => {
+    setGeneratingInvoiceVisitId(visit.id)
+    try {
+      const invoice = await dataService.generateInvoiceForVisit(visit.id)
+      toast.success('Invoice ready')
+      router.push(`/invoices/${invoice.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to generate invoice')
+    } finally {
+      setGeneratingInvoiceVisitId(null)
+    }
   }
 
   const statusTabs: { value: StatusFilter; label: string }[] = [
@@ -227,16 +244,15 @@ export default function VisitsPage() {
                         Complete
                       </button>
                     )}
-                    <button
-                      onClick={async () => {
-                        const inv = await dataService.getInvoiceByVisit(visit.id)
-                        if (inv) router.push(`/invoices/${inv.id}`)
-                        else router.push('/invoices')
-                      }}
-                      className="text-xs px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-medium"
-                    >
-                      Invoice
-                    </button>
+                    {canManageBilling && visit.status !== 'cancelled' && (
+                      <button
+                        onClick={() => handleInvoiceAction(visit)}
+                        disabled={generatingInvoiceVisitId === visit.id}
+                        className="text-xs px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 disabled:opacity-60 transition-colors font-medium"
+                      >
+                        {generatingInvoiceVisitId === visit.id ? 'Preparing...' : 'Generate invoice'}
+                      </button>
+                    )}
                     {visit.status !== 'cancelled' && visit.status !== 'completed' && (
                       <button
                         onClick={() => setCancelVisitId(visit.id)}
@@ -332,16 +348,15 @@ export default function VisitsPage() {
                   Mark as Completed
                 </button>
               )}
-              <button
-                onClick={async () => {
-                  const inv = await dataService.getInvoiceByVisit(selectedVisit.id)
-                  if (inv) router.push(`/invoices/${inv.id}`)
-                  setSelectedVisit(null)
-                }}
-                className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                View Invoice
-              </button>
+              {canManageBilling && selectedVisit.status !== 'cancelled' && (
+                <button
+                  onClick={() => handleInvoiceAction(selectedVisit)}
+                  disabled={generatingInvoiceVisitId === selectedVisit.id}
+                  className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-60 transition-colors"
+                >
+                  {generatingInvoiceVisitId === selectedVisit.id ? 'Preparing invoice...' : 'Generate invoice'}
+                </button>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2 border-t border-slate-100">

@@ -217,6 +217,26 @@ export interface Database {
           duplicate_registration: boolean
         }>
       }
+      create_invoice_for_visit: {
+        Args: {
+          p_visit_id: string
+        }
+        Returns: Array<{
+          id: string
+          visit_id: string
+          patient_id: string
+          invoice_number: string
+          line_items: Json
+          subtotal: number
+          discount: number
+          total: number
+          payment_status: 'pending' | 'paid_cash' | 'paid_online'
+          payment_method: 'cash' | 'online_upi' | null
+          paid_at: string | null
+          created_at: string
+          updated_at: string
+        }>
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

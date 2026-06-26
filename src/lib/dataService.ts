@@ -201,40 +201,20 @@ export async function getInvoiceByVisit(visitId: string): Promise<Invoice | null
   return data as Invoice | null
 }
 
-export async function createInvoice(
-  visitId: string,
-  patientId: string,
-  lineItems: LineItem[] = []
-): Promise<Invoice> {
-  const supabase = createClient()
-  const subtotal = lineItems.reduce((acc, item) => acc + item.amount * item.quantity, 0)
+export async function generateInvoiceForVisit(visitId: string): Promise<Invoice> {
+  const response = await fetch('/api/admin/invoices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visit_id: visitId }),
+  })
 
-  // Generate invoice number
-  const today = format(new Date(), 'yyMM')
-  const { count } = await supabase
-    .from('invoices')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', format(new Date(), 'yyyy-MM-dd'))
-  const invoiceNumber = `${today}-${String((count ?? 0) + 1).padStart(4, '0')}`
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const message = typeof payload?.error === 'string' ? payload.error : 'Unable to generate invoice'
+    throw new Error(message)
+  }
 
-  const { data, error } = await supabase
-    .from('invoices')
-    .insert({
-      visit_id: visitId,
-      patient_id: patientId,
-      invoice_number: invoiceNumber,
-      line_items: lineItems,
-      subtotal,
-      discount: 0,
-      total: subtotal,
-      payment_status: 'pending',
-      payment_method: null,
-      paid_at: null,
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return data as Invoice
+  return payload.invoice as Invoice
 }
 
 export async function updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {

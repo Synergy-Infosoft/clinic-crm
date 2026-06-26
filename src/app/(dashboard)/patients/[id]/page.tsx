@@ -18,6 +18,7 @@ import {
   NotebookText,
   Phone,
   Pill,
+  Receipt,
   Stethoscope,
   User,
   UserRound,
@@ -25,6 +26,8 @@ import {
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
+import { useAuth } from '@/context/AuthContext'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import * as dataService from '@/lib/dataService'
 import type { Patient, Visit } from '@/types'
@@ -100,11 +103,15 @@ function DetailItem({ label, value, icon: Icon, tone = 'slate' }: DetailItemProp
 export default function PatientProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const toast = useToast()
+  const { profile } = useAuth()
+  const canManageBilling = profile?.role === 'admin' || profile?.role === 'receptionist'
   const id = params?.id as string
 
   const [patient, setPatient] = useState<Patient | null>(null)
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  const [generatingInvoiceVisitId, setGeneratingInvoiceVisitId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -123,6 +130,19 @@ export default function PatientProfilePage() {
     }
     if (id) loadData()
   }, [id])
+
+  const handleInvoiceAction = async (visit: Visit) => {
+    setGeneratingInvoiceVisitId(visit.id)
+    try {
+      const invoice = await dataService.generateInvoiceForVisit(visit.id)
+      toast.success('Invoice ready')
+      router.push(`/invoices/${invoice.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to generate invoice')
+    } finally {
+      setGeneratingInvoiceVisitId(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -303,7 +323,22 @@ export default function PatientProfilePage() {
                           {visit.doctor ? ` • Dr. ${visit.doctor.name.replace(/^Dr\.?\s*/i, '')}` : ' • Doctor not assigned'}
                         </p>
                       </div>
-                      <StatusBadge status={visit.status} />
+                      <div className="flex flex-col items-start gap-2 lg:items-end">
+                        <StatusBadge status={visit.status} />
+                        {canManageBilling && visit.status !== 'cancelled' && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            loading={generatingInvoiceVisitId === visit.id}
+                            onClick={() => handleInvoiceAction(visit)}
+                            className="whitespace-nowrap"
+                          >
+                            <Receipt className="h-3.5 w-3.5" />
+                            Generate invoice
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

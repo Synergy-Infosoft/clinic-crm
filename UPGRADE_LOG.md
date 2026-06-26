@@ -376,3 +376,25 @@ Validation performed:
 - `npm run build` - passed.
 - Verified the `website_url` column exists on the linked Supabase project.
 - `supabase db advisors --linked --type security` - completed; only existing `auth_leaked_password_protection` warning remains.
+
+## Manual invoice generation workflow
+
+Updated: 2026-06-26T17:21:30.4163320+05:30
+
+- Stopped public/staff patient registration from automatically creating pending invoices.
+- Added a server-only `create_invoice_for_visit` database function that creates one invoice per visit on demand and returns the existing invoice if one already exists.
+- Added a protected `/api/admin/invoices` endpoint so only authenticated admin/receptionist users can generate visit invoices.
+- Moved invoice number generation back to the private daily invoice counter to avoid duplicate invoice numbers from browser-side counting.
+- Added "Generate invoice" actions on Dashboard, Patient Queue, Visit Details, and Patient Profile visit history.
+- Prevented invoice generation for cancelled visits.
+- Hid invoice generation actions from doctor-role users in the UI while keeping server-side admin/receptionist enforcement.
+- Added migration `20260626114625_manual_invoice_generation.sql`.
+
+Validation performed:
+
+- `supabase db push --linked --yes` - passed and applied `20260626114625_manual_invoice_generation.sql`.
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
+- `supabase db advisors --linked --type security` - completed; only existing `auth_leaked_password_protection` warning remains.

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button'
 import { AddVisitDialog } from '@/components/visits/AddVisitDialog'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { useAuth } from '@/context/AuthContext'
 import { formatCurrency, formatTime } from '@/lib/utils'
 import * as dataService from '@/lib/dataService'
 import type { Visit, DashboardStats, Doctor } from '@/types'
@@ -27,12 +28,15 @@ import { StatsCardSkeleton } from '@/components/shared/LoadingSkeleton'
 export default function DashboardPage() {
   const router = useRouter()
   const toast = useToast()
+  const { profile } = useAuth()
+  const canManageBilling = profile?.role === 'admin' || profile?.role === 'receptionist'
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [visits, setVisits] = useState<Visit[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddVisit, setShowAddVisit] = useState(false)
   const [cancelVisitId, setCancelVisitId] = useState<string | null>(null)
+  const [generatingInvoiceVisitId, setGeneratingInvoiceVisitId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -81,6 +85,19 @@ export default function DashboardPage() {
     if (cancelVisitId) {
       await handleStatusChange(cancelVisitId, 'cancelled')
       setCancelVisitId(null)
+    }
+  }
+
+  const handleInvoiceAction = async (visit: Visit) => {
+    setGeneratingInvoiceVisitId(visit.id)
+    try {
+      const invoice = await dataService.generateInvoiceForVisit(visit.id)
+      toast.success('Invoice ready')
+      router.push(`/invoices/${invoice.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to generate invoice')
+    } finally {
+      setGeneratingInvoiceVisitId(null)
     }
   }
 
@@ -238,16 +255,15 @@ export default function DashboardPage() {
                               Complete
                             </button>
                           )}
-                          <button
-                            onClick={async () => {
-                              const inv = await dataService.getInvoiceByVisit(visit.id)
-                              if (inv) router.push(`/invoices/${inv.id}`)
-                              else router.push('/invoices')
-                            }}
-                            className="text-xs px-2.5 py-1 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-medium"
-                          >
-                            Invoice
-                          </button>
+                          {canManageBilling && visit.status !== 'cancelled' && (
+                            <button
+                              onClick={() => handleInvoiceAction(visit)}
+                              disabled={generatingInvoiceVisitId === visit.id}
+                              className="text-xs px-2.5 py-1 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 disabled:opacity-60 transition-colors font-medium whitespace-nowrap"
+                            >
+                              {generatingInvoiceVisitId === visit.id ? 'Preparing...' : 'Generate invoice'}
+                            </button>
+                          )}
                           {visit.status !== 'cancelled' && visit.status !== 'completed' && (
                             <button
                               onClick={() => setCancelVisitId(visit.id)}
