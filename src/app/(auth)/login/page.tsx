@@ -107,35 +107,6 @@ export default function LoginPage() {
               Sign In
             </Button>
           </form>
-
-          {/* Demo accounts */}
-          <div className="mt-6 pt-4 border-t border-slate-100">
-            <p className="text-xs text-slate-500 mb-3 text-center font-medium">Demo Accounts</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Admin', email: 'admin@clinic.com', password: 'Admin@1234' },
-                { label: 'Reception', email: 'receptionist@clinic.com', password: 'Clinic@1234' },
-                { label: 'Doctor', email: 'doctor@clinic.com', password: 'Doctor@1234' },
-              ].map((acc) => (
-                <button
-                  key={acc.label}
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await login(acc.email, acc.password)
-                      router.push('/dashboard')
-                    } catch {
-                      toast.error('Login failed')
-                    }
-                  }}
-                  className="text-xs py-2 px-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[var(--primary)] transition-colors text-center"
-                >
-                  <span className="block font-medium text-slate-700">{acc.label}</span>
-                  <span className="text-slate-400 text-xs">Click to login</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">

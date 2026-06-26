@@ -318,3 +318,24 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
+
+## Admin-managed staff login accounts
+
+Updated: 2026-06-26T16:26:29.5345541+05:30
+
+- Removed the non-working demo account shortcut buttons from the login page.
+- Added an admin-only `/api/admin/staff-users` endpoint for creating receptionist and doctor Supabase Auth users.
+- Kept the Supabase service-role key server-only; the Settings UI calls the protected API instead of touching Auth admin functions directly.
+- Added a new Settings > Staff Users section where admins can create receptionist/doctor login accounts and review existing staff/admin accounts.
+- Kept public signup closed; only authenticated admins can create staff logins.
+- Created dummy Supabase Auth users and matching `profiles` rows:
+  - `dummy.receptionist@clinic.test` as `receptionist`
+  - `dummy.doctor@clinic.test` as `doctor`
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.
+- Verified both dummy `profiles` rows exist in the linked Supabase project.

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Stethoscope,
   Trash2,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -34,7 +35,7 @@ import {
   normalizeHexColor,
 } from '@/lib/brandTheme'
 import * as dataService from '@/lib/dataService'
-import type { ClinicDaySchedule, ClinicSettings, Doctor } from '@/types'
+import type { ClinicDaySchedule, ClinicSettings, Doctor, UserRole } from '@/types'
 
 const dayOptions = [
   { value: 1, label: 'Monday', short: 'Mon' },
@@ -65,11 +66,18 @@ const themePresets = [
 const settingsSections = [
   { id: 'branding', label: 'Branding', description: 'Logo and colors', icon: Palette },
   { id: 'clinic', label: 'Clinic Profile', description: 'Name, phone, address', icon: Building2 },
+  { id: 'staff', label: 'Staff Users', description: 'Secure login accounts', icon: UserPlus },
   { id: 'doctors', label: 'Doctor List', description: 'Shown on registration', icon: Users },
   { id: 'hours', label: 'Registration Hours', description: 'Open days and slots', icon: Clock },
 ] as const
 
 type SettingsSectionId = (typeof settingsSections)[number]['id']
+type StaffCreatableRole = Extract<UserRole, 'receptionist' | 'doctor'>
+
+const staffRoleOptions: { value: StaffCreatableRole; label: string }[] = [
+  { value: 'receptionist', label: 'Receptionist' },
+  { value: 'doctor', label: 'Doctor' },
+]
 
 const emptySettings: ClinicSettings = {
   clinic_name: '',
@@ -111,17 +119,49 @@ function getDoctorDeleteErrorMessage(error: unknown) {
   return 'Unable to delete doctor'
 }
 
+function formatStaffCreatedAt(value: string | null | undefined) {
+  if (!value) return 'Recently'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Recently'
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
+function getRoleLabel(role: UserRole) {
+  if (role === 'admin') return 'Admin'
+  if (role === 'doctor') return 'Doctor'
+  return 'Receptionist'
+}
+
+function getRoleBadgeClass(role: UserRole) {
+  if (role === 'admin') return 'bg-amber-50 text-amber-700 border-amber-200'
+  if (role === 'doctor') return 'bg-violet-50 text-violet-700 border-violet-200'
+  return 'bg-blue-50 text-blue-700 border-blue-200'
+}
+
 export default function SettingsPage() {
   const toast = useToast()
   const { profile, loading: authLoading } = useAuth()
   const { refreshBranding, setThemeOverride } = useBranding()
   const [settings, setSettings] = useState<ClinicSettings>(emptySettings)
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [staffUsers, setStaffUsers] = useState<dataService.StaffUser[]>([])
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
+  const [newStaffUser, setNewStaffUser] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    role: 'receptionist' as StaffCreatableRole,
+  })
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('branding')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [addingDoctor, setAddingDoctor] = useState(false)
+  const [creatingStaffUser, setCreatingStaffUser] = useState(false)
   const [savingDoctorId, setSavingDoctorId] = useState<string | null>(null)
 
   const brandPreview = useMemo(() => normalizeBrandTheme(settings), [settings])
@@ -138,12 +178,14 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [clinicSettings, doctorList] = await Promise.all([
+        const [clinicSettings, doctorList, staffList] = await Promise.all([
           dataService.getClinicSettings(),
           dataService.getAllDoctors(),
+          dataService.getStaffUsers(),
         ])
         setSettings(clinicSettings)
         setDoctors(doctorList)
+        setStaffUsers(staffList)
       } catch (error) {
         console.error('Failed to load settings:', error)
         toast.error('Unable to load settings')
@@ -152,8 +194,12 @@ export default function SettingsPage() {
       }
     }
 
-    if (!authLoading) loadSettings()
-  }, [authLoading, toast])
+    if (!authLoading && profile?.role === 'admin') {
+      loadSettings()
+    } else if (!authLoading && profile?.role && profile.role !== 'admin') {
+      setLoading(false)
+    }
+  }, [authLoading, profile?.role, toast])
 
   const updateField = <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
@@ -291,6 +337,54 @@ export default function SettingsPage() {
   const refreshDoctors = async () => {
     const doctorList = await dataService.getAllDoctors()
     setDoctors(doctorList)
+  }
+
+  const refreshStaffUsers = async () => {
+    const staffList = await dataService.getStaffUsers()
+    setStaffUsers(staffList)
+  }
+
+  const createStaffUser = async () => {
+    const fullName = newStaffUser.full_name.trim()
+    const email = newStaffUser.email.trim().toLowerCase()
+
+    if (fullName.length < 2) {
+      toast.error('Staff name is required')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Enter a valid staff email')
+      return
+    }
+
+    if (newStaffUser.password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+
+    setCreatingStaffUser(true)
+    try {
+      await dataService.createStaffUser({
+        full_name: fullName,
+        email,
+        password: newStaffUser.password,
+        role: newStaffUser.role,
+      })
+      setNewStaffUser({
+        full_name: '',
+        email: '',
+        password: '',
+        role: 'receptionist',
+      })
+      await refreshStaffUsers()
+      toast.success('Staff login created')
+    } catch (error) {
+      console.error('Failed to create staff user:', error)
+      toast.error(error instanceof Error ? error.message : 'Unable to create staff user')
+    } finally {
+      setCreatingStaffUser(false)
+    }
   }
 
   const addDoctor = async () => {
@@ -613,6 +707,94 @@ export default function SettingsPage() {
                     value={settings.address}
                     onChange={(event) => updateField('address', event.target.value)}
                   />
+                </section>
+              )}
+
+              {activeSection === 'staff' && (
+                <section className="card p-5 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-5 h-5 text-[var(--primary)]" />
+                      <div>
+                        <h2 className="text-base font-semibold text-slate-900">Staff Users</h2>
+                        <p className="text-xs text-slate-500">Create receptionist and doctor login accounts. Public signup remains closed.</p>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {staffUsers.length} accounts
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-slate-900">Create a staff login</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Share the temporary password privately with the staff member. They can use the normal login page after creation.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_180px_1fr_auto] gap-3 items-end">
+                      <Input
+                        label="Full name"
+                        placeholder="Amit Kumar"
+                        value={newStaffUser.full_name}
+                        onChange={(event) => setNewStaffUser((current) => ({ ...current, full_name: event.target.value }))}
+                      />
+                      <Input
+                        label="Email"
+                        type="email"
+                        placeholder="staff@clinic.com"
+                        autoComplete="off"
+                        value={newStaffUser.email}
+                        onChange={(event) => setNewStaffUser((current) => ({ ...current, email: event.target.value }))}
+                      />
+                      <Select
+                        label="Role"
+                        options={staffRoleOptions}
+                        value={newStaffUser.role}
+                        onChange={(event) => setNewStaffUser((current) => ({ ...current, role: event.target.value as StaffCreatableRole }))}
+                      />
+                      <Input
+                        label="Temporary password"
+                        type="password"
+                        placeholder="Minimum 8 characters"
+                        autoComplete="new-password"
+                        value={newStaffUser.password}
+                        onChange={(event) => setNewStaffUser((current) => ({ ...current, password: event.target.value }))}
+                      />
+                      <Button type="button" onClick={createStaffUser} loading={creatingStaffUser} className="min-w-32">
+                        <UserPlus className="w-4 h-4" />
+                        Create login
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {staffUsers.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+                        <UserPlus className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                        <p className="text-sm font-semibold text-slate-800">No staff users found</p>
+                        <p className="text-xs text-slate-500 mt-1">Create receptionist and doctor logins above.</p>
+                      </div>
+                    ) : staffUsers.map((staff) => (
+                      <div key={staff.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900 truncate">{staff.full_name}</p>
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getRoleBadgeClass(staff.role)}`}>
+                                {getRoleLabel(staff.role)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-500 truncate">{staff.email || 'No email found in Auth'}</p>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Created</p>
+                            <p className="text-sm text-slate-600">{formatStaffCreatedAt(staff.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </section>
               )}
 

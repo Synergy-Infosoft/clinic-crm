@@ -7,7 +7,7 @@ import { createClient } from './supabase/client'
 import { format } from 'date-fns'
 import { normalizeWorkingSchedule } from './registration'
 import { defaultBrandTheme, normalizeBrandTheme } from './brandTheme'
-import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats, ClinicSettings } from '../types'
+import type { Patient, Visit, Invoice, Doctor, ChargePreset, LineItem, DashboardStats, ClinicSettings, UserRole } from '../types'
 import type { Database } from '../types/database'
 
 export interface SelfRegisterPayload {
@@ -23,6 +23,21 @@ export interface SelfRegisterPayload {
   visit_type: 'first_visit' | 'follow_up'
   consultation_date: string
   consultation_time: string
+}
+
+export interface StaffUser {
+  id: string
+  full_name: string
+  email: string | null
+  role: UserRole
+  created_at: string
+}
+
+export interface CreateStaffUserPayload {
+  full_name: string
+  email: string
+  password: string
+  role: Extract<UserRole, 'receptionist' | 'doctor'>
 }
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
@@ -311,6 +326,34 @@ export async function deleteDoctor(id: string): Promise<void> {
     .eq('id', id)
 
   if (error) throw error
+}
+
+// ─── Staff Users ─────────────────────────────────────────────────────────────
+
+export async function getStaffUsers(): Promise<StaffUser[]> {
+  const response = await fetch('/api/admin/staff-users', { cache: 'no-store' })
+  const result = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Unable to load staff users')
+  }
+
+  return result.staff as StaffUser[]
+}
+
+export async function createStaffUser(payload: CreateStaffUserPayload): Promise<StaffUser> {
+  const response = await fetch('/api/admin/staff-users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const result = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Unable to create staff user')
+  }
+
+  return result.staff as StaffUser
 }
 
 // ─── Charge Presets ───────────────────────────────────────────────────────────
