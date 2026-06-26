@@ -303,3 +303,18 @@ Validation performed:
 - `npm run lint` - passed.
 - `npm run test` - passed, 10 tests.
 - `npm run build` - passed.
+
+## Branding preset snap-back fix
+
+Updated: 2026-06-24T17:35:09.8290594+05:30
+
+- Fixed an issue where showing a toast after clicking a theme preset could re-trigger the Settings loader and overwrite the draft color with the saved database color.
+- Memoized the toast context value so toast notifications no longer cause dependent effects to rerun unnecessarily.
+- Presets and Restore default branding can now keep their draft color changes visible until Save Settings is clicked.
+
+Validation performed:
+
+- `npm run typecheck` - passed.
+- `npm run lint` - passed.
+- `npm run test` - passed, 10 tests.
+- `npm run build` - passed.

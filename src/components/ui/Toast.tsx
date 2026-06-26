@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react'
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -38,13 +38,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
   }, [dismiss])
 
-  const ctx: ToastContextType = {
+  const ctx = useMemo<ToastContextType>(() => ({
     toast: addToast,
     success: (msg) => addToast(msg, 'success'),
     error: (msg) => addToast(msg, 'error', 5000),
     info: (msg) => addToast(msg, 'info'),
     warning: (msg) => addToast(msg, 'warning'),
-  }
+  }), [addToast])
 
   return (
     <ToastContext.Provider value={ctx}>
