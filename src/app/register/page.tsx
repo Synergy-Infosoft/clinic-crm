@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Stethoscope, Shield, Clock, AlertCircle, ExternalLink } from 'lucide-react'
+import { Stethoscope, Shield, Clock, AlertCircle, ExternalLink, ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { BrandLogo } from '@/components/shared/BrandLogo'
 import * as dataService from '@/lib/dataService'
-import { fallbackClinicSettings, formatTimeLabel, formatTimeRange, formatWorkingScheduleSummary, getAvailableConsultationTimes, getClinicDateTimeParts, getConsultationSlotError, getWorkingSlotsForDate, type PublicClinicSettings } from '@/lib/registration'
+import { fallbackClinicSettings, formatTimeLabel, formatTimeRange, getAvailableConsultationTimes, getClinicDateTimeParts, getConsultationSlotError, getWorkingSlotsForDate, type PublicClinicSettings } from '@/lib/registration'
 import type { Doctor } from '@/types'
 
 const schema = z.object({
@@ -27,6 +27,7 @@ const schema = z.object({
   consultation_time: z.string().regex(/^\d{2}:\d{2}$/, 'Please select a consultation time'),
 })
 
+type FormStepType = 1 | 2 | 3
 type FormData = z.infer<typeof schema>
 
 function toDateInputValue(date = new Date()) {
@@ -48,15 +49,30 @@ const referralOptions = [
   { value: 'other', label: 'Other' },
 ]
 
-// Default clinic settings — will be replaced by DB settings later
+const STEPS = [
+  { id: 1 as const, title: 'Basic details', hint: 'Patient info' },
+  { id: 2 as const, title: 'Visit details', hint: 'Symptoms & doctor' },
+  { id: 3 as const, title: 'Appointment', hint: 'Date & time' },
+]
+
+
 export default function RegisterPage() {
   const router = useRouter()
   const toast = useToast()
+  const [currentStep, setCurrentStep] = useState<FormStepType>(1)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [clinicOpen, setClinicOpen] = useState(false)
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
-  const scheduleSummary = formatWorkingScheduleSummary(settings)
+  const scheduleRows = useMemo(() => {
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return settings.working_schedule
+      .filter((day) => day.enabled && day.slots.length > 0)
+      .map((day) => ({
+        day: dayLabels[day.day] ?? 'Day',
+        hours: day.slots.map(formatTimeRange),
+      }))
+  }, [settings.working_schedule])
   const websiteUrl = settings.website_url.trim()
 
   useEffect(() => {
@@ -85,8 +101,10 @@ export default function RegisterPage() {
     setValue,
     watch,
     formState: { errors, isSubmitting },
+    trigger,
   } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
+    mode: 'onChange',
     defaultValues: {
       visit_type: 'first_visit',
       consultation_date: toDateInputValue(),
@@ -132,6 +150,27 @@ export default function RegisterPage() {
     }
   }, [availableTimes, clinicToday, configLoading, selectedDate, selectedTime, setValue])
 
+  const handleNextStep = async () => {
+    let fieldsToValidate: (keyof FormData)[] = []
+
+    if (currentStep === 1) {
+      fieldsToValidate = ['full_name', 'age', 'gender', 'phone']
+    } else if (currentStep === 2) {
+      fieldsToValidate = ['visit_type', 'chief_complaint']
+    } else if (currentStep === 3) {
+      fieldsToValidate = ['consultation_date', 'consultation_time']
+    }
+
+    const isValid = await trigger(fieldsToValidate)
+    if (isValid) {
+      setCurrentStep((prev) => (prev < STEPS.length ? (prev + 1) as FormStepType : prev))
+    }
+  }
+
+  const handlePrevStep = () => {
+    setCurrentStep((prev) => (prev > 1 ? (prev - 1) as FormStepType : prev))
+  }
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     const selectedSlotError = getConsultationSlotError(settings, data.consultation_date, data.consultation_time)
     if (selectedSlotError) {
@@ -163,355 +202,552 @@ export default function RegisterPage() {
     }
   }
 
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[var(--primary-light)] to-white">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          <BrandLogo
-            logoUrl={settings.logo_url}
-            label={`${settings.clinic_name} logo`}
-            className="w-10 h-10 bg-[var(--primary)] rounded-xl overflow-hidden"
-            fallback={<Stethoscope className="w-5 h-5 text-white" />}
-          />
-          <div className="flex-1">
-            <h1 className="text-sm font-bold text-slate-900">{settings.clinic_name}</h1>
-            <p className="text-xs text-slate-500">{settings.doctor_name}</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div
-              className={`w-2 h-2 rounded-full ${clinicOpen ? 'bg-emerald-500 pulse-dot' : 'bg-slate-400'}`}
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <BrandLogo
+              logoUrl={settings.logo_url}
+              label={`${settings.clinic_name} logo`}
+              className="w-10 h-10 bg-[var(--primary)] rounded-xl overflow-hidden"
+              fallback={<Stethoscope className="w-5 h-5 text-white" />}
             />
-            <span className={`text-xs font-medium ${clinicOpen ? 'text-emerald-600' : 'text-slate-500'}`}>
-              {clinicOpen ? 'Reception Live' : 'Closed'}
-            </span>
+            <div>
+              <h1 className="text-sm font-bold text-slate-900">{settings.clinic_name}</h1>
+              <p className="text-xs text-slate-500">{settings.doctor_name}</p>
+            </div>
+          </div>
+          <div
+            className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 ${
+              clinicOpen
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            <div
+              className={`h-2.5 w-2.5 rounded-full ${
+                clinicOpen
+                  ? 'bg-emerald-500 pulse-dot'
+                  : 'bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.14)]'
+              }`}
+            />
+            <span className="text-xs font-bold">{clinicOpen ? 'Reception live' : 'Closed now'}</span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Clinic closed banner */}
-        {!clinicOpen && (
-          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-800">Registration is Closed</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Please visit us during working hours: {scheduleSummary || 'contact reception for timings'}.
-                Registration will reopen automatically.
-              </p>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-6 lg:h-[calc(100dvh-73px)] lg:overflow-hidden lg:py-8">
+        <div className="grid grid-cols-1 gap-8 lg:h-full lg:grid-cols-2 lg:gap-12 lg:items-start">
+          {/* Left Side - Hero Content */}
+          <div className="order-2 space-y-6 lg:sticky lg:top-6 lg:order-1 lg:max-h-full lg:overflow-y-auto lg:pr-1">
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-72 h-72 bg-[var(--primary-light)] rounded-3xl blur-3xl opacity-30"></div>
+              <div className="relative overflow-hidden rounded-3xl bg-[var(--primary)] p-8 shadow-xl">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-950/65 via-slate-900/45 to-slate-950/25" />
+                <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-white/15 blur-3xl" />
+                <div className="relative space-y-4 text-white drop-shadow-sm">
+                  <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/15 px-4 py-2 backdrop-blur-md">
+                    <Stethoscope className="w-4 h-4" />
+                    <span className="text-sm font-medium">Professional Care</span>
+                  </div>
+                  <h3 className="max-w-xl text-3xl font-bold leading-tight text-white sm:text-4xl">Quality Healthcare at Your Convenience</h3>
+                  <p className="max-w-lg text-base leading-7 text-white/95 sm:text-lg">
+                    Quick online registration. Get your token and wait comfortably from home.
+                  </p>
+                  <div className="pt-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 flex-shrink-0 mt-1" />
+                      <div>
+                        <p className="font-semibold text-sm">Fast Check-in</p>
+                        <p className="text-sm text-white/90">Complete registration in under 2 minutes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 flex-shrink-0 mt-1" />
+                      <div>
+                        <p className="font-semibold text-sm">Secure & Private</p>
+                        <p className="text-sm text-white/90">Your data is encrypted and protected</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-1" />
+                      <div>
+                        <p className="font-semibold text-sm">No Waiting</p>
+                        <p className="text-sm text-white/90">Get a token and visit when it{`'`}s ready</p>
+                      </div>
+                    </div>
+                  </div>
+                  {websiteUrl && (
+                    <a
+                      href={websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/25"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Visit Hospital Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Working Hours Info */}
+            <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Working hours</p>
+                  <p className="mt-1 text-sm text-slate-500">Appointment slots are based on these timings.</p>
+                </div>
+              </div>
+              {scheduleRows.length > 0 ? (
+                <div className="mt-4 grid gap-2">
+                  {scheduleRows.map((row) => (
+                    <div key={row.day} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
+                      <span className="w-10 shrink-0 text-sm font-bold text-slate-900">{row.day}</span>
+                      <span className="text-sm font-semibold leading-6 text-slate-700">{row.hours.join(' / ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">Contact reception for timings.</p>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Welcome */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">Patient Registration</h2>
-          <p className="text-slate-500 text-sm mt-1">
-            Fill in your details to get a token number. Reception staff will call your token when it&apos;s your turn.
-          </p>
-          {websiteUrl && (
-            <a
-              href={websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--primary)] bg-white px-4 py-2 text-sm font-semibold text-[var(--primary)] shadow-sm transition-colors hover:bg-[var(--primary-light)]"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View hospital website
-            </a>
-          )}
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
-                  errors.full_name ? 'border-red-400' : 'border-slate-300'
-                }`}
-                {...register('full_name')}
-              />
-              {errors.full_name && (
-                <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {errors.full_name.message}
-                </p>
-              )}
-            </div>
-
-            {/* Father's Name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Father&apos;s Name
-                <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter father's name"
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
-                  errors.father_name ? 'border-red-400' : 'border-slate-300'
-                }`}
-                {...register('father_name')}
-              />
-              {errors.father_name && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.father_name.message}</p>
-              )}
-            </div>
-
-            {/* Age + Gender */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Age <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={120}
-                  placeholder="e.g. 35"
-                  className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
-                    errors.age ? 'border-red-400' : 'border-slate-300'
-                  }`}
-                  {...register('age')}
-                />
-                {errors.age && (
-                  <p className="mt-1.5 text-xs text-red-600">{errors.age.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2 h-12">
-                  {(['male', 'female', 'other'] as const).map((g) => (
-                    <label
-                      key={g}
-                      className="flex-1 flex items-center justify-center border border-slate-300 rounded-xl cursor-pointer text-sm capitalize hover:border-[var(--primary)] transition-colors has-[:checked]:border-[var(--primary)] has-[:checked]:bg-[var(--primary-light)] has-[:checked]:text-[var(--primary)] font-medium"
-                    >
-                      <input type="radio" value={g} className="sr-only" {...register('gender')} />
-                      {g === 'male' ? '♂ M' : g === 'female' ? '♀ F' : 'O'}
-                    </label>
-                  ))}
-                </div>
-                {errors.gender && (
-                  <p className="mt-1.5 text-xs text-red-600">{errors.gender.message as string}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="10-digit mobile number"
-                maxLength={10}
-                className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
-                  errors.phone ? 'border-red-400' : 'border-slate-300'
-                }`}
-                {...register('phone')}
-              />
-              {errors.phone && (
-                <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {errors.phone.message}
-                </p>
-              )}
-            </div>
-
-            {/* Consultation Date + Time */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Right Side - Multi-Step Form */}
+          <div className="order-1 lg:order-2 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-2">
+            {/* Clinic closed banner */}
+            {!clinicOpen && (
+              <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Consultation Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    min={clinicToday}
-                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
-                      errors.consultation_date ? 'border-red-400' : 'border-slate-300'
-                    }`}
-                    {...register('consultation_date')}
-                  />
-                  {errors.consultation_date && (
-                    <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
-                  )}
+                  <p className="text-sm font-bold text-red-800">Registration is currently closed</p>
+                  <p className="mt-0.5 text-xs leading-5 text-red-700">
+                    Please book within the working hours shown on this page, or contact reception for help.
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Consultation Time <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    disabled={configLoading || availableTimes.length === 0}
-                    className={`w-full h-12 px-4 text-base border rounded-xl bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 ${
-                      errors.consultation_time || slotError ? 'border-red-400' : 'border-slate-300'
-                    }`}
-                    {...register('consultation_time')}
-                  >
-                    <option value="">
-                      {availableTimes.length === 0 ? 'No available time' : 'Select time'}
-                    </option>
-                    {availableTimes.map((time) => (
-                      <option key={time} value={time}>
-                        {formatTimeLabel(time)}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.consultation_time && (
-                    <p className="mt-1.5 text-xs text-red-600">{errors.consultation_time.message}</p>
-                  )}
-                </div>
-              </div>
-              <div
-                className={`rounded-xl border px-3 py-2 text-xs ${
-                  slotError
-                    ? 'border-amber-200 bg-amber-50 text-amber-800'
-                    : selectedDateSlots.length > 0
-                      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                }`}
-              >
-                {selectedDateSlots.length > 0 ? (
-                  <p>Available on selected date: {selectedDateScheduleText}</p>
-                ) : (
-                  <p>Clinic is closed on the selected date. Please choose another day.</p>
-                )}
-                {slotError && <p className="mt-1 font-medium">{slotError}</p>}
-              </div>
-            </div>
-
-            {/* Visit Type */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Visit Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                {...register('visit_type')}
-              >
-                <option value="first_visit">First-time visit</option>
-                <option value="follow_up">Follow-up / repeat visit</option>
-              </select>
-            </div>
-
-            {/* Chief Complaint */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Disease / Symptoms <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Describe the disease or symptoms briefly... (minimum 5 characters)"
-                className={`w-full px-4 py-3 text-base border rounded-xl bg-white text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent resize-none ${
-                  errors.chief_complaint ? 'border-red-400' : 'border-slate-300'
-                }`}
-                {...register('chief_complaint')}
-              />
-              {errors.chief_complaint && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.chief_complaint.message}</p>
-              )}
-            </div>
-
-            {/* Doctor preference */}
-            {doctors.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Doctor Preference
-                  <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <select
-                  className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                  {...register('doctor_id')}
-                >
-                  <option value="">Any available doctor</option>
-                  {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} — {d.specialization || 'General'}
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
 
-            {/* Referral Source */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                How did you hear about us?
-                <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
-              </label>
-              <select
-                className="w-full h-12 px-4 text-base border border-slate-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                {...register('referral_source')}
-              >
-                <option value="">Select an option</option>
-                {referralOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+            {/* Form Container */}
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8">
+              {/* Stepper */}
+              <div className="mb-7 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {STEPS.map((step) => {
+                    const isDone = currentStep > step.id
+                    const isActive = currentStep === step.id
+                    return (
+                      <div
+                        key={step.id}
+                        className={`rounded-xl px-3 py-2.5 transition-all ${
+                          isActive
+                            ? 'bg-white shadow-sm ring-1 ring-[var(--primary)]/20'
+                            : isDone
+                              ? 'bg-emerald-50'
+                              : 'bg-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2 sm:justify-start">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              isDone
+                                ? 'bg-emerald-500 text-white'
+                                : isActive
+                                  ? 'bg-[var(--primary)] text-white'
+                                  : 'bg-white text-slate-400 ring-1 ring-slate-200'
+                            }`}
+                          >
+                            {isDone ? <Check className="h-3.5 w-3.5" /> : step.id}
+                          </span>
+                          <span className="hidden min-w-0 sm:block">
+                            <span className={`block truncate text-xs font-bold ${isActive ? 'text-slate-900' : 'text-slate-500'}`}>
+                              {step.title}
+                            </span>
+                            <span className="hidden truncate text-[11px] text-slate-400 sm:block">{step.hint}</span>
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-[var(--primary)] transition-all duration-300"
+                    style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+                  />
+                </div>
+              </div>
 
-            {/* Address */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Address
-                <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Your home address"
-                className="w-full px-4 py-3 text-base border border-slate-300 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent resize-none"
-                {...register('address')}
-              />
-            </div>
+              {/* Form */}
+              <form onSubmit={handleSubmit(onSubmit)}>
+                {/* STEP 1: Basic Details */}
+                {currentStep === 1 && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">Step 1 of 3</p>
+                      <h3 className="mt-1 text-2xl font-bold text-slate-900">Basic details</h3>
+                      <p className="text-slate-600 text-sm">Share the patient information reception needs to create your token.</p>
+                    </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError)}
-              className="w-full h-14 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Registering...
-                </>
-              ) : configLoading ? (
-                <>Checking reception hours...</>
-              ) : !clinicOpen ? (
-                <>Registration Closed</>
-              ) : availableTimes.length === 0 ? (
-                <>No Slots Available</>
-              ) : (
-                <>Get My Token Number</>
-              )}
-            </button>
-          </form>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your full name"
+                        autoComplete="name"
+                        className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                          errors.full_name ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        {...register('full_name')}
+                      />
+                      {errors.full_name && (
+                        <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {errors.full_name.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Father{`'`}s Name <span className="text-xs font-normal text-slate-500">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter father's name"
+                        autoComplete="additional-name"
+                        className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                          errors.father_name ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        {...register('father_name')}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-900 mb-2">
+                          Age <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          placeholder="e.g. 35"
+                          inputMode="numeric"
+                          className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                            errors.age ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                          {...register('age')}
+                        />
+                        {errors.age && <p className="mt-1.5 text-xs text-red-600">{errors.age.message}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-900 mb-2">
+                          Gender <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                            errors.gender ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                          {...register('gender')}
+                        >
+                          <option value="">Select</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        inputMode="numeric"
+                        autoComplete="tel"
+                        className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                          errors.phone ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        {...register('phone')}
+                      />
+                      {errors.phone && (
+                        <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {errors.phone.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Address <span className="text-xs font-normal text-slate-500">(optional)</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Your home address"
+                        autoComplete="street-address"
+                        className="w-full px-4 py-3 text-base border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all resize-none"
+                        {...register('address')}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: Visit Details */}
+                {currentStep === 2 && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">Step 2 of 3</p>
+                      <h3 className="mt-1 text-2xl font-bold text-slate-900">Visit details</h3>
+                      <p className="text-slate-600 text-sm">Tell us why you are visiting and choose a doctor if needed.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Visit Type <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          { value: 'first_visit', label: 'First-time visit', description: 'New patient or new concern' },
+                          { value: 'follow_up', label: 'Repeat / follow-up', description: 'Continuing treatment' },
+                        ].map((option) => (
+                          <label
+                            key={option.value}
+                            className="relative flex min-h-20 cursor-pointer flex-col justify-center rounded-xl border-2 border-slate-200 bg-slate-50 p-4 transition-all hover:border-[var(--primary)]/50 has-[:checked]:border-[var(--primary)] has-[:checked]:bg-[var(--primary-light)]"
+                          >
+                            <input
+                              type="radio"
+                              value={option.value}
+                              className="sr-only"
+                              {...register('visit_type')}
+                            />
+                            <span className="font-semibold text-slate-900">{option.label}</span>
+                            <span className="mt-1 text-xs text-slate-500">{option.description}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Disease / symptoms <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        placeholder="Describe the disease or symptoms briefly..."
+                        className={`w-full px-4 py-3 text-base border rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] resize-none ${
+                          errors.chief_complaint ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        {...register('chief_complaint')}
+                      />
+                      {errors.chief_complaint && (
+                        <p className="mt-1.5 text-xs text-red-600">{errors.chief_complaint.message}</p>
+                      )}
+                    </div>
+
+                    {doctors.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-900 mb-2">
+                          Doctor Preference <span className="text-xs font-normal text-slate-500">(optional)</span>
+                        </label>
+                        <select
+                          className="w-full h-12 px-4 text-base border border-slate-200 rounded-xl bg-slate-50 text-slate-900 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+                          {...register('doctor_id')}
+                        >
+                          <option value="">Any available doctor</option>
+                          {doctors.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ? {d.specialization || 'General'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        How did you hear about us? <span className="text-xs font-normal text-slate-500">(optional)</span>
+                      </label>
+                      <select
+                        className="w-full h-12 px-4 text-base border border-slate-200 rounded-xl bg-slate-50 text-slate-900 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+                        {...register('referral_source')}
+                      >
+                        <option value="">Select an option</option>
+                        {referralOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: Appointment */}
+                {currentStep === 3 && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">Step 3 of 3</p>
+                      <h3 className="mt-1 text-2xl font-bold text-slate-900">Appointment</h3>
+                      <p className="text-slate-600 text-sm">Pick an available date and time. We will generate your token after submission.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-900 mb-2">
+                          Consultation Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          min={clinicToday}
+                          className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
+                            errors.consultation_date ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                          {...register('consultation_date')}
+                        />
+                        {errors.consultation_date && (
+                          <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-900 mb-2">
+                          Consultation Time <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          disabled={configLoading || availableTimes.length === 0}
+                          className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed ${
+                            errors.consultation_time || slotError ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                          {...register('consultation_time')}
+                        >
+                          <option value="">
+                            {availableTimes.length === 0 ? 'No available time' : 'Select time'}
+                          </option>
+                          {availableTimes.map((time) => (
+                            <option key={time} value={time}>
+                              {formatTimeLabel(time)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`rounded-xl border px-4 py-3 text-sm transition-all ${
+                        slotError
+                          ? 'border-amber-200 bg-amber-50 text-amber-800'
+                          : selectedDateSlots.length > 0
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {selectedDateSlots.length > 0 ? (
+                        <p className="font-semibold">Available on selected date: {selectedDateScheduleText}</p>
+                      ) : (
+                        <p className="font-semibold">Clinic is closed on this date. Choose another day.</p>
+                      )}
+                      {slotError && <p className="mt-1 font-semibold">{slotError}</p>}
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-900">Secure registration</p>
+                        <p className="text-xs text-emerald-800 mt-0.5">
+                          Your details go directly to reception. You will receive your token after submitting this form.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation Buttons */}
+                <div className="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+                  <div className="min-w-0">
+                    {currentStep > 1 ? (
+                      <button
+                        type="button"
+                        onClick={handlePrevStep}
+                        className="inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Back
+                      </button>
+                    ) : (
+                      <p className="text-xs font-medium text-slate-500">Step {currentStep} of {STEPS.length}</p>
+                    )}
+                  </div>
+
+                  {currentStep < STEPS.length ? (
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      className="inline-flex h-11 min-w-32 items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--primary-hover)] active:scale-95"
+                    >
+                      Continue <ChevronRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError)}
+                      className="inline-flex h-11 min-w-36 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:opacity-60 disabled:hover:bg-emerald-600 active:scale-95"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Registering...
+                        </>
+                      ) : (
+                        <>
+                          Get token <Check className="h-4 w-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Footer */}
+              <p className="mt-5 text-center text-xs text-slate-500">
+                Need help? Please contact reception during clinic hours.
+              </p>
+            </div>
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Your data is secure and only visible to clinic staff</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Working hours: {scheduleSummary || 'Contact reception'}</span>
-          </div>
-        </div>
-      </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   )
 }
