@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Stethoscope, Shield, Clock, AlertCircle, ExternalLink, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { Stethoscope, Shield, Clock, AlertCircle, ExternalLink, ChevronRight, ChevronLeft, Check, X } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { BrandLogo } from '@/components/shared/BrandLogo'
 import * as dataService from '@/lib/dataService'
@@ -64,7 +64,7 @@ export default function RegisterPage() {
   const [clinicOpen, setClinicOpen] = useState(false)
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
-  const formScrollRef = useRef<HTMLDivElement>(null)
+  const [showTimingsModal, setShowTimingsModal] = useState(false)
   const formCardRef = useRef<HTMLDivElement>(null)
   const scheduleRows = useMemo(() => {
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -159,18 +159,6 @@ export default function RegisterPage() {
 
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth'
-      const scrollContainer = formScrollRef.current
-
-      if (scrollContainer && scrollContainer.scrollHeight > scrollContainer.clientHeight) {
-        const containerTop = scrollContainer.getBoundingClientRect().top
-        const cardTop = formCard.getBoundingClientRect().top
-        scrollContainer.scrollTo({
-          top: scrollContainer.scrollTop + cardTop - containerTop,
-          behavior,
-        })
-        return
-      }
-
       formCard.scrollIntoView({ behavior, block: 'start' })
     })
   }
@@ -272,10 +260,10 @@ export default function RegisterPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6 lg:h-[calc(100dvh-73px)] lg:overflow-hidden lg:py-8">
-        <div className="grid grid-cols-1 gap-8 lg:h-full lg:grid-cols-2 lg:gap-12 lg:items-start">
+      <div className="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 lg:items-start">
           {/* Left Side - Hero Content */}
-          <div className="order-2 space-y-6 lg:sticky lg:top-6 lg:order-1 lg:max-h-full lg:overflow-y-auto lg:pr-1">
+          <div className="order-2 space-y-6 lg:sticky lg:top-24 lg:order-1">
             <div className="relative">
               <div className="absolute -top-4 -left-4 w-72 h-72 bg-[var(--primary-light)] rounded-3xl blur-3xl opacity-30"></div>
               <div className="relative overflow-hidden rounded-3xl bg-[var(--primary)] p-8 shadow-xl">
@@ -313,49 +301,35 @@ export default function RegisterPage() {
                       </div>
                     </div>
                   </div>
-                  {websiteUrl && (
-                    <a
-                      href={websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/25"
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {websiteUrl && (
+                      <a
+                        href={websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-5 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/25"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Visit Hospital Website
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowTimingsModal(true)}
+                      className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-5 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/25"
                     >
-                      <ExternalLink className="h-4 w-4" />
-                      Visit Hospital Website
-                    </a>
-                  )}
+                      <Clock className="h-4 w-4" />
+                      View timings
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Working Hours Info */}
-            <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                  <Clock className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Working hours</p>
-                  <p className="mt-1 text-sm text-slate-500">Appointment slots are based on these timings.</p>
-                </div>
-              </div>
-              {scheduleRows.length > 0 ? (
-                <div className="mt-4 grid gap-2">
-                  {scheduleRows.map((row) => (
-                    <div key={row.day} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
-                      <span className="w-10 shrink-0 text-sm font-bold text-slate-900">{row.day}</span>
-                      <span className="text-sm font-semibold leading-6 text-slate-700">{row.hours.join(' / ')}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">Contact reception for timings.</p>
-              )}
-            </div>
           </div>
 
           {/* Right Side - Multi-Step Form */}
-          <div ref={formScrollRef} className="order-1 lg:order-2 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-2">
+          <div className="order-1 lg:order-2">
             {/* Clinic closed banner */}
             {!clinicOpen && (
               <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -363,7 +337,7 @@ export default function RegisterPage() {
                 <div>
                   <p className="text-sm font-bold text-red-800">Registration is currently closed</p>
                   <p className="mt-0.5 text-xs leading-5 text-red-700">
-                    Please book within the working hours shown on this page, or contact reception for help.
+                    Tap View timings to check working hours, or contact reception for help.
                   </p>
                 </div>
               </div>
@@ -763,6 +737,47 @@ export default function RegisterPage() {
             </div>
           </div>
         </div>
+
+
+      {showTimingsModal && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-3"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clinic-timings-title"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div>
+                <h2 id="clinic-timings-title" className="text-sm font-bold text-slate-900">Clinic timings</h2>
+                <p className="text-xs text-slate-500">Available registration slots</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTimingsModal(false)}
+                aria-label="Close timings"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[70dvh] overflow-y-auto p-3">
+              {scheduleRows.length > 0 ? (
+                <div className="grid gap-2">
+                  {scheduleRows.map((row) => (
+                    <div key={row.day} className="flex items-start gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                      <span className="w-10 shrink-0 text-sm font-bold text-slate-900">{row.day}</span>
+                      <span className="text-sm font-semibold leading-6 text-slate-700">{row.hours.join(' / ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">Contact reception for timings.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {
