@@ -65,6 +65,7 @@ export default function RegisterPage() {
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
   const [showTimingsModal, setShowTimingsModal] = useState(false)
+  const [appointmentReviewed, setAppointmentReviewed] = useState(false)
   const formCardRef = useRef<HTMLDivElement>(null)
   const scheduleRows = useMemo(() => {
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -164,6 +165,7 @@ export default function RegisterPage() {
   }
 
   const goToStep = (step: FormStepType) => {
+    if (step === 3) setAppointmentReviewed(false)
     setCurrentStep(step)
     scrollToFormTop()
   }
@@ -192,6 +194,11 @@ export default function RegisterPage() {
   }
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
+    if (currentStep !== 3 || !appointmentReviewed) {
+      toast.error('Please review and select your appointment date or time before getting a token.')
+      return
+    }
+
     const selectedSlotError = getConsultationSlotError(settings, data.consultation_date, data.consultation_time)
     if (selectedSlotError) {
       toast.error(selectedSlotError)
@@ -221,6 +228,12 @@ export default function RegisterPage() {
       toast.error(err.message || 'Registration failed. Please try again.')
     }
   }
+
+  const handleAppointmentReviewed = () => {
+    setAppointmentReviewed(true)
+  }
+
+  const handleFinalSubmit = handleSubmit(onSubmit)
 
 
   return (
@@ -394,7 +407,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit(onSubmit)}>
+              <form noValidate onSubmit={(event) => event.preventDefault()}>
                 {/* STEP 1: Basic Details */}
                 {currentStep === 1 && (
                   <div className="space-y-5 animate-fadeIn">
@@ -622,7 +635,7 @@ export default function RegisterPage() {
                           className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] ${
                             errors.consultation_date ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
                           }`}
-                          {...register('consultation_date')}
+                          {...register('consultation_date', { onChange: handleAppointmentReviewed })}
                         />
                         {errors.consultation_date && (
                           <p className="mt-1.5 text-xs text-red-600">{errors.consultation_date.message}</p>
@@ -637,7 +650,7 @@ export default function RegisterPage() {
                           className={`w-full h-12 px-4 text-base border rounded-xl bg-slate-50 text-slate-900 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed ${
                             errors.consultation_time || slotError ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'
                           }`}
-                          {...register('consultation_time')}
+                          {...register('consultation_time', { onChange: handleAppointmentReviewed })}
                         >
                           <option value="">
                             {availableTimes.length === 0 ? 'No available time' : 'Select time'}
@@ -667,6 +680,12 @@ export default function RegisterPage() {
                       )}
                       {slotError && <p className="mt-1 font-semibold">{slotError}</p>}
                     </div>
+
+                    {!appointmentReviewed && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+                        Please review or change the appointment date/time once before getting your token.
+                      </div>
+                    )}
 
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
                       <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -707,8 +726,9 @@ export default function RegisterPage() {
                     </button>
                   ) : (
                     <button
-                      type="submit"
-                      disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError)}
+                      type="button"
+                      onClick={handleFinalSubmit}
+                      disabled={isSubmitting || configLoading || !clinicOpen || availableTimes.length === 0 || Boolean(slotError) || !appointmentReviewed}
                       className="inline-flex h-11 min-w-36 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:opacity-60 disabled:hover:bg-emerald-600 active:scale-95"
                     >
                       {isSubmitting ? (
