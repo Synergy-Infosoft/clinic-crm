@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -64,6 +64,8 @@ export default function RegisterPage() {
   const [clinicOpen, setClinicOpen] = useState(false)
   const [settings, setSettings] = useState<PublicClinicSettings>(fallbackClinicSettings)
   const [configLoading, setConfigLoading] = useState(true)
+  const formScrollRef = useRef<HTMLDivElement>(null)
+  const formCardRef = useRef<HTMLDivElement>(null)
   const scheduleRows = useMemo(() => {
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     return settings.working_schedule
@@ -78,7 +80,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch('/api/public-config')
+        const response = await fetch('/api/public-config', { cache: 'no-store' })
         if (!response.ok) throw new Error('Unable to load clinic configuration')
         const config = await response.json()
         setDoctors(config.doctors ?? [])
@@ -150,6 +152,34 @@ export default function RegisterPage() {
     }
   }, [availableTimes, clinicToday, configLoading, selectedDate, selectedTime, setValue])
 
+  const scrollToFormTop = () => {
+    window.requestAnimationFrame(() => {
+      const formCard = formCardRef.current
+      if (!formCard) return
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth'
+      const scrollContainer = formScrollRef.current
+
+      if (scrollContainer && scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+        const containerTop = scrollContainer.getBoundingClientRect().top
+        const cardTop = formCard.getBoundingClientRect().top
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollTop + cardTop - containerTop,
+          behavior,
+        })
+        return
+      }
+
+      formCard.scrollIntoView({ behavior, block: 'start' })
+    })
+  }
+
+  const goToStep = (step: FormStepType) => {
+    setCurrentStep(step)
+    scrollToFormTop()
+  }
+
   const handleNextStep = async () => {
     let fieldsToValidate: (keyof FormData)[] = []
 
@@ -162,13 +192,15 @@ export default function RegisterPage() {
     }
 
     const isValid = await trigger(fieldsToValidate)
-    if (isValid) {
-      setCurrentStep((prev) => (prev < STEPS.length ? (prev + 1) as FormStepType : prev))
+    if (isValid && currentStep < STEPS.length) {
+      goToStep((currentStep + 1) as FormStepType)
     }
   }
 
   const handlePrevStep = () => {
-    setCurrentStep((prev) => (prev > 1 ? (prev - 1) as FormStepType : prev))
+    if (currentStep > 1) {
+      goToStep((currentStep - 1) as FormStepType)
+    }
   }
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -323,7 +355,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Right Side - Multi-Step Form */}
-          <div className="order-1 lg:order-2 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-2">
+          <div ref={formScrollRef} className="order-1 lg:order-2 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-2">
             {/* Clinic closed banner */}
             {!clinicOpen && (
               <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -338,7 +370,7 @@ export default function RegisterPage() {
             )}
 
             {/* Form Container */}
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8">
+            <div ref={formCardRef} className="scroll-mt-24 rounded-3xl border border-slate-100 bg-white p-8 shadow-2xl">
               {/* Stepper */}
               <div className="mb-7 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
                 <div className="grid grid-cols-3 gap-2">

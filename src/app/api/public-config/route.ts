@@ -4,6 +4,7 @@ import { fallbackClinicSettings, isClinicOpenNow, normalizeWorkingSchedule } fro
 import { normalizeBrandTheme } from '@/lib/brandTheme'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   try {
@@ -44,7 +45,7 @@ export async function GET() {
         doctors: doctors ?? [],
         clinic_open: isClinicOpenNow(publicSettings),
       },
-      { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } }
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   } catch {
     return NextResponse.json(
